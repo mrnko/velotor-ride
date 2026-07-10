@@ -1,0 +1,124 @@
+# Деплой на VPS
+
+Розрахований на звичайний Ubuntu/Debian VPS з nginx + PHP-FPM + MySQL, домен
+з SSL (Let's Encrypt). Без Docker.
+
+## 1. Вимоги на сервері
+
+- PHP 8.2+ з розширеннями: `pdo_mysql`, `mbstring`, `curl`, `openssl`, `bcmath`, `xml`, `ctype`, `fileinfo`, `tokenizer`.
+- MySQL 8+ (або MariaDB 10.6+).
+- Composer 2, Node.js 18+ (тільки для збірки фронтенду під час деплою).
+- nginx (або Apache) з PHP-FPM.
+- Домен, що вказує на сервер, і сертифікат SSL (для Telegram webhook
+  обов'язковий HTTPS).
+
+## 2. Перше розгортання
+
+```bash
+cd /var/www
+git clone <repo-url> velotor-ride
+cd velotor-ride
+
+composer install --no-dev --optimize-autoloader
+npm install
+npm run build
+
+cp .env.example .env
+php artisan key:generate
+# відредагувати .env: APP_URL, DB_*, TELEGRAM_*, VELOTOR_TIMEZONE
+
+php artisan migrate --force
+php artisan db:seed --force   # опційно: демо-дані для першого запуску
+
+chown -R www-data:www-data storage bootstrap/cache
+chmod -R 775 storage bootstrap/cache
+```
+
+`APP_ENV=production`, `APP_DEBUG=false` в `.env` на проді.
+
+## 3. nginx (приклад)
+
+```nginx
+server {
+    listen 443 ssl http2;
+    server_name velotor.example.com;
+    root /var/www/velotor-ride/public;
+
+    ssl_certificate     /etc/letsencrypt/live/velotor.example.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/velotor.example.com/privkey.pem;
+
+    index index.php;
+
+    location / {
+        try_files $uri $uri/ /index.php?$query_string;
+    }
+
+    location ~ \.php$ {
+        fastcgi_pass unix:/run/php/php8.2-fpm.sock;
+        fastcgi_param SCRIPT_FILENAME $realpath_root$fastcgi_script_name;
+        include fastcgi_params;
+    }
+
+    location ~ /\.(?!well-known).* {
+        deny all;
+    }
+}
+
+server {
+    listen 80;
+    server_name velotor.example.com;
+    return 301 https://$host$request_uri;
+}
+```
+
+## 4. Cron (Laravel Scheduler)
+
+Один запис у crontab користувача, від імені якого запущений сайт (наприклад
+`www-data`):
+
+```bash
+* * * * * cd /var/www/velotor-ride && php artisan schedule:run >> /dev/null 2>&1
+```
+
+Це і закриває тиждень щонеділі о 00:00 (`week:close`), і виконує будь-які
+інші заплановані команди в майбутньому. Черг/воркерів не потрібно.
+
+## 5. Telegram webhook
+
+1. У `.env` виставити `TELEGRAM_BOT_TOKEN` (від @BotFather) і
+   `TELEGRAM_WEBHOOK_SECRET` (будь-який довгий випадковий рядок).
+2. Зареєструвати вебхук у Telegram (один раз, з будь-якої машини):
+
+```bash
+curl -X POST "https://api.telegram.org/bot<TELEGRAM_BOT_TOKEN>/setWebhook" \
+  -d "url=https://velotor.example.com/telegram/webhook" \
+  -d "secret_token=<TELEGRAM_WEBHOOK_SECRET>"
+```
+
+3. Перевірити: `curl "https://api.telegram.org/bot<TOKEN>/getWebhookInfo"` —
+   поле `url` має збігатися, `last_error_message` — порожнє.
+4. В адмінці (`/admin/settings`) вказати `telegram_chat_id` — id чату, куди
+   бот надсилатиме тижневі звіти (можна дізнатись, додавши бота в чат і
+   подивившись `getUpdates`/лог `bot_message_logs`).
+
+## 6. Оновлення (деплой нової версії)
+
+```bash
+cd /var/www/velotor-ride
+git pull
+composer install --no-dev --optimize-autoloader
+npm install && npm run build
+php artisan migrate --force
+php artisan config:cache
+php artisan route:cache
+php artisan view:cache
+```
+
+## 7. Перевірка після деплою
+
+- Відкрити `https://velotor.example.com/` — головна сторінка повинна
+  відкритись без помилок.
+- Написати боту `/start` у Telegram-чаті — має відповісти.
+- Написати `результат 10 км` — має зарахувати і відповісти з підсумком.
+- `php artisan schedule:list` — переконатись, що `week:close` заплановано.
+- `/admin/bot-logs` — переконатись, що вхідні повідомлення логуються.
