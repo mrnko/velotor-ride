@@ -1,91 +1,161 @@
 <script setup>
-import { Link } from '@inertiajs/vue3';
+import { Link, router } from '@inertiajs/vue3';
 import AppLayout from '../Layouts/AppLayout.vue';
 import StatCard from '../Components/StatCard.vue';
-import EmptyState from '../Components/EmptyState.vue';
+import Avatar from '../Components/Avatar.vue';
+import CountUp from '../Components/CountUp.vue';
+import WeeklyChart from '../Components/WeeklyChart.vue';
+import RankingTable from '../Components/RankingTable.vue';
 
 defineOptions({ layout: AppLayout });
 
-const props = defineProps({
+defineProps({
     period: Object,
+    previous: { type: Object, default: null },
+    next: { type: Object, default: null },
     weekTotalDistance: Number,
+    weekTorcoins: Number,
     yearTotalDistance: Number,
     activeParticipants: Number,
-    top5: Array,
+    leader: Object,
+    weekRankings: { type: Array, default: () => [] },
+    allTimeTop10: { type: Array, default: () => [] },
     totalParticipants: Number,
+    clubStats: Object,
+    weeklyChart: { type: Array, default: () => [] },
 });
 
-function formatKm(value) {
-    return new Intl.NumberFormat('uk-UA', { maximumFractionDigits: 0 }).format(value);
+function formatNumber(value, digits = 0) {
+    return new Intl.NumberFormat('uk-UA', { maximumFractionDigits: digits }).format(value ?? 0);
 }
 
 function formatDate(value) {
-    return new Date(value).toLocaleDateString('uk-UA', { day: 'numeric', month: 'long' });
+    return new Date(`${value}T12:00:00`).toLocaleDateString('uk-UA', { day: 'numeric', month: 'long' });
 }
 
-const medal = ['🥇', '🥈', '🥉'];
+function goToWeek(week) {
+    if (!week) return;
+    router.get(`/stat/weeks/${week.year}/${week.week_number}`, {}, { preserveScroll: true });
+}
 </script>
 
 <template>
-    <div class="space-y-10">
-        <section class="text-center sm:text-left">
-            <p class="text-sm font-semibold uppercase tracking-widest text-amber-400">Велоклуб</p>
-            <h1 class="mt-2 text-3xl font-extrabold tracking-tight text-white sm:text-4xl">
-                Крутимо педалі разом 🚴
-            </h1>
-            <p class="mx-auto mt-3 max-w-xl text-slate-400 sm:mx-0">
-                Надсилай свій кілометраж прямо в Telegram-чат — бот порахує рейтинг тижня,
-                року та Torcoins автоматично.
-            </p>
-            <div class="mt-6 flex flex-wrap justify-center gap-3 sm:justify-start">
-                <Link href="/week" class="rounded-lg bg-amber-500 px-4 py-2.5 text-sm font-semibold text-slate-950 transition hover:bg-amber-400">
-                    Рейтинг тижня
-                </Link>
-                <Link href="/weeks" class="rounded-lg border border-slate-700 px-4 py-2.5 text-sm font-semibold text-slate-200 transition hover:bg-slate-900">
-                    Архів тижнів
-                </Link>
+    <div class="space-y-10 sm:space-y-14">
+        <section class="relative overflow-hidden rounded-[2rem] bg-brand-gradient py-6 text-white shadow-xl shadow-brand-900/10 sm:py-9 lg:py-12">
+            <button
+                v-if="previous"
+                type="button"
+                class="group absolute left-2 top-1/2 z-20 flex cursor-pointer h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-white/10 backdrop-blur transition hover:scale-110 hover:bg-white/25 sm:left-3 sm:h-11 sm:w-11"
+                aria-label="Попередній тиждень"
+                @click="goToWeek(previous)"
+            >
+                <svg class="h-5 w-5 text-white transition group-hover:-translate-x-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="m15 18-6-6 6-6"/></svg>
+            </button>
+            <button
+                v-if="next"
+                type="button"
+                class="group absolute right-2 top-1/2 z-20 flex cursor-pointer h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-white/10 backdrop-blur transition hover:scale-110 hover:bg-white/25 sm:right-3 sm:h-11 sm:w-11"
+                aria-label="Наступний тиждень"
+                @click="goToWeek(next)"
+            >
+                <svg class="h-5 w-5 text-white transition group-hover:translate-x-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="m9 18 6-6-6-6"/></svg>
+            </button>
+
+            <div class="relative z-10 grid items-center gap-8 px-12 sm:px-16 lg:grid-cols-[1.35fr_0.65fr] lg:px-20">
+                <div>
+                    <div class="flex flex-col items-start gap-2">
+                        <span class="rounded-full bg-gold-400 px-3 py-1 text-xs font-extrabold text-brand-950">Тиждень №{{ period.week_number }}</span>
+                        <span class="rounded-full bg-white/15 px-3 py-1 text-xs font-bold uppercase tracking-wider backdrop-blur">{{ period.year }} рік</span>
+                    </div>
+                    <h1 class="mt-5 max-w-2xl text-2xl font-extrabold tracking-tight sm:text-3xl lg:text-4xl">Статистика велоклубу «ВелоТОР»</h1>
+                    <p class="mt-3 text-sm text-brand-100 sm:text-base">
+                        {{ formatDate(period.start_date) }} — {{ formatDate(period.end_date) }}
+                    </p>
+                </div>
+
+                <div class="rounded-3xl border border-white/15 bg-white/10 p-5 backdrop-blur-sm sm:p-6">
+                    <p class="text-xs font-bold uppercase tracking-[0.2em] text-brand-100">Лідер тижня</p>
+                    <div v-if="leader" class="mt-4 flex items-center gap-4">
+                        <div class="relative">
+                            <Avatar :src="leader.avatar_url" :name="leader.name" :initials="leader.initials" size="lg" />
+                            <span class="absolute -right-2 -top-3 rotate-6 text-2xl drop-shadow-lg" aria-hidden="true">👑</span>
+                        </div>
+                        <div class="min-w-0">
+                            <Link :href="`/stat/user/${leader.slug}`" class="block truncate text-lg font-extrabold transition-colors hover:text-gold-300">{{ leader.name }}</Link>
+                            <p class="mt-1 text-sm text-brand-100">{{ formatNumber(leader.distance_km, 1) }} км · {{ leader.rides_count }} заїздів</p>
+                        </div>
+                    </div>
+                    <p v-else class="mt-4 text-sm text-brand-100">Перший результат тижня ще попереду.</p>
+                </div>
+            </div>
+            <div class="absolute -right-20 -top-24 h-72 w-72 rounded-full bg-white/10"></div>
+            <div class="absolute -bottom-28 left-1/3 h-64 w-64 rounded-full bg-gold-400/10"></div>
+        </section>
+
+        <section data-reveal>
+            <div class="mb-5">
+                <p class="text-xs font-bold uppercase tracking-[0.2em] text-brand-500">Поточний тиждень</p>
+                <h2 class="mt-1 text-2xl font-extrabold text-brand-950">Усі учасники</h2>
+                <p class="mt-1 text-sm text-slate-500">Хто скільки накатав і скільки заїздів уже додав.</p>
+            </div>
+            <RankingTable :rows="weekRankings" :show-rides="true" :show-torcoins="true" />
+        </section>
+
+        <section data-reveal>
+            <div class="mb-5">
+                <p class="text-xs font-bold uppercase tracking-[0.2em] text-brand-500">Поточний зріз</p>
+                <h2 class="mt-1 text-2xl font-extrabold text-brand-950">Тиждень у цифрах</h2>
+            </div>
+            <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
+                <StatCard label="Кілометрів накатано" :value="weekTotalDistance" :decimals="1" suffix=" км" />
+                <StatCard label="Torcoins за тиждень" :value="weekTorcoins" hint="зароблено учасниками" />
+                <StatCard label="Активних учасників" :value="activeParticipants" :hint="`із ${totalParticipants} у клубі`" />
+                <StatCard label="Кілометрів за рік" :value="yearTotalDistance" :decimals="1" suffix=" км" :hint="String(period.year)" />
             </div>
         </section>
 
-        <section>
-            <div class="mb-3 flex flex-wrap items-baseline justify-between gap-2">
-                <h2 class="text-lg font-bold text-white">{{ period.title }}</h2>
-                <span class="text-sm text-slate-500">{{ formatDate(period.start_date) }} – {{ formatDate(period.end_date) }}</span>
+        <section data-reveal>
+            <div class="rounded-[2rem] border border-brand-100 bg-white p-5 shadow-sm sm:p-7">
+                <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+                    <div>
+                        <p class="text-xs font-bold uppercase tracking-wider text-slate-400">Уся дистанція</p>
+                        <p class="mt-2 text-3xl font-extrabold text-brand-950"><CountUp :value="clubStats.total_distance" :decimals="1" /> <span class="text-base text-brand-500">км</span></p>
+                    </div>
+                    <div>
+                        <p class="text-xs font-bold uppercase tracking-wider text-slate-400">Усього заїздів</p>
+                        <p class="mt-2 text-3xl font-extrabold text-brand-950"><CountUp :value="clubStats.total_rides" /></p>
+                    </div>
+                    <div>
+                        <p class="text-xs font-bold uppercase tracking-wider text-slate-400">Torcoins клубу</p>
+                        <p class="mt-2 text-3xl font-extrabold text-brand-950"><CountUp :value="clubStats.total_torcoins" /></p>
+                    </div>
+                    <div>
+                        <p class="text-xs font-bold uppercase tracking-wider text-slate-400">Тижнів в історії</p>
+                        <p class="mt-2 text-3xl font-extrabold text-brand-950"><CountUp :value="clubStats.weeks_count" /></p>
+                    </div>
+                </div>
+                <div class="mt-6 flex flex-wrap gap-3 border-t border-brand-50 pt-5">
+                    <Link href="/stat/year" class="rounded-xl border border-brand-200 px-4 py-2.5 text-sm font-bold text-brand-700 transition hover:bg-brand-50">Статистика за рік</Link>
+                    <Link href="/stat/all-time" class="rounded-xl border border-brand-200 px-4 py-2.5 text-sm font-bold text-brand-700 transition hover:bg-brand-50">Рейтинг за весь час</Link>
+                    <Link href="/stat/weeks" class="rounded-xl border border-brand-200 px-4 py-2.5 text-sm font-bold text-brand-700 transition hover:bg-brand-50">Архів тижнів</Link>
+                </div>
             </div>
 
-            <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                <StatCard label="Км за тиждень" :value="formatKm(weekTotalDistance)" />
-                <StatCard label="Км за рік" :value="formatKm(yearTotalDistance)" :hint="String(period.year)" />
-                <StatCard label="Активні цього тижня" :value="activeParticipants" />
-                <StatCard label="Учасників клубу" :value="totalParticipants" />
+            <div class="mt-4 grid gap-4 lg:grid-cols-2">
+                <WeeklyChart :data="weeklyChart" title="Кілометраж клубу за 12 тижнів" />
+                <WeeklyChart :data="weeklyChart" title="Активні учасники за 12 тижнів" value-key="active_participants" unit="уч." />
             </div>
         </section>
 
-        <section>
-            <div class="mb-3 flex items-center justify-between">
-                <h2 class="text-lg font-bold text-white">🏆 Топ-5 тижня</h2>
-                <Link href="/week" class="text-sm font-medium text-amber-400 hover:text-amber-300">Повний рейтинг →</Link>
+        <section data-reveal>
+            <div class="mb-5 flex flex-wrap items-end justify-between gap-3">
+                <div>
+                    <p class="text-xs font-bold uppercase tracking-[0.2em] text-brand-500">Клубна легенда</p>
+                    <h2 class="mt-1 text-2xl font-extrabold text-brand-950">Топ-10 активних за весь час</h2>
+                </div>
+                <Link href="/stat/all-time" class="text-sm font-bold text-brand-600 hover:text-brand-700">Повний рейтинг →</Link>
             </div>
-
-            <EmptyState
-                v-if="!top5.length"
-                title="Ще ніхто не здав результат"
-                description="Напиши в чат «результат 10 км», щоб стати першим цього тижня."
-            />
-
-            <ol v-else class="space-y-2">
-                <li
-                    v-for="row in top5"
-                    :key="row.participant_id"
-                    class="flex items-center gap-3 rounded-xl border border-slate-800 bg-slate-900/50 p-3"
-                >
-                    <span class="w-7 text-center text-lg">{{ medal[row.rank - 1] ?? row.rank }}</span>
-                    <Link :href="`/participants/${row.participant_id}`" class="flex-1 truncate font-medium text-slate-100 hover:text-amber-300">
-                        {{ row.name }}
-                    </Link>
-                    <span class="font-semibold tabular-nums text-slate-200">{{ formatKm(row.distance_km) }} км</span>
-                </li>
-            </ol>
+            <RankingTable :rows="allTimeTop10" :show-rides="true" :show-torcoins="true" :searchable="false" />
         </section>
     </div>
 </template>

@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Models\Setting;
+use App\Support\Seo;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -45,8 +46,10 @@ class HandleInertiaRequests extends Middleware
                 'success' => fn () => $request->session()->get('success'),
                 'error' => fn () => $request->session()->get('error'),
             ],
-            'clubName' => config('app.name'),
-            'telegramInviteUrl' => fn () => Setting::get('telegram_invite_url') ?: null,
+            'clubName' => config('velotor.brand.name'),
+            'brand' => config('velotor.brand'),
+            'telegramInviteUrl' => fn () => Setting::get('telegram_invite_url') ?: config('velotor.brand.telegram_url'),
+            'seo' => Seo::make(),
         ];
     }
 }

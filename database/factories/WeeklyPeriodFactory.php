@@ -15,15 +15,15 @@ class WeeklyPeriodFactory extends Factory
     {
         $start = Carbon::parse(fake()->dateTimeBetween('-1 year', 'now'))
             ->timezone(config('velotor.timezone'))
-            ->startOfWeek(Carbon::SUNDAY)
+            ->startOfWeek(Carbon::MONDAY)
             ->startOfDay();
 
         $end = $start->copy()->addDays(7);
 
         return [
-            'year' => $start->year,
-            'week_number' => (int) $start->weekOfYear,
-            'title' => "Тиждень {$start->weekOfYear}/{$start->year}",
+            'year' => (int) $start->isoWeekYear,
+            'week_number' => (int) $start->isoWeek,
+            'title' => "Тиждень {$start->isoWeek} / {$start->isoWeekYear}",
             'start_date' => $start,
             'end_date' => $end,
             'status' => 'closed',

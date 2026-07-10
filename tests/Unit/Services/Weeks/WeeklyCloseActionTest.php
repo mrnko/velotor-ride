@@ -38,11 +38,11 @@ class WeeklyCloseActionTest extends TestCase
         $period = WeeklyPeriod::factory()->active()->create([
             'year' => 2026,
             'week_number' => 1,
-            'start_date' => '2026-01-04',
-            'end_date' => '2026-01-11',
+            'start_date' => '2025-12-29',
+            'end_date' => '2026-01-05',
         ]);
 
-        Carbon::setTestNow(Carbon::parse('2026-01-11 00:00:00', 'Europe/Kyiv'));
+        Carbon::setTestNow(Carbon::parse('2026-01-05 00:00:00', 'Europe/Kyiv'));
 
         $alice = Participant::factory()->create(['display_name' => 'Alice']);
         $bob = Participant::factory()->create(['display_name' => 'Bob']);
@@ -72,11 +72,11 @@ class WeeklyCloseActionTest extends TestCase
     public function test_second_invocation_right_after_the_first_is_a_no_op(): void
     {
         WeeklyPeriod::factory()->active()->create([
-            'year' => 2026, 'week_number' => 1, 'start_date' => '2026-01-04', 'end_date' => '2026-01-11',
+            'year' => 2026, 'week_number' => 1, 'start_date' => '2025-12-29', 'end_date' => '2026-01-05',
         ]);
 
-        // Freeze "now" at exactly the moment the scheduler fires (Sunday 00:00).
-        Carbon::setTestNow(Carbon::parse('2026-01-11 00:00:00', 'Europe/Kyiv'));
+        // Freeze "now" at exactly the moment the scheduler fires (Monday 00:00).
+        Carbon::setTestNow(Carbon::parse('2026-01-05 00:00:00', 'Europe/Kyiv'));
 
         $action = app(WeeklyCloseAction::class);
 
@@ -95,11 +95,11 @@ class WeeklyCloseActionTest extends TestCase
     public function test_close_refuses_to_act_before_the_period_has_ended(): void
     {
         WeeklyPeriod::factory()->active()->create([
-            'year' => 2026, 'week_number' => 1, 'start_date' => '2026-01-04', 'end_date' => '2026-01-11',
+            'year' => 2026, 'week_number' => 1, 'start_date' => '2025-12-29', 'end_date' => '2026-01-05',
         ]);
 
         // "Now" is mid-week, well before end_date.
-        Carbon::setTestNow(Carbon::parse('2026-01-06 12:00:00', 'Europe/Kyiv'));
+        Carbon::setTestNow(Carbon::parse('2026-01-02 12:00:00', 'Europe/Kyiv'));
 
         $action = app(WeeklyCloseAction::class);
 
@@ -111,10 +111,10 @@ class WeeklyCloseActionTest extends TestCase
     public function test_force_closes_a_period_early_for_manual_admin_use(): void
     {
         WeeklyPeriod::factory()->active()->create([
-            'year' => 2026, 'week_number' => 1, 'start_date' => '2026-01-04', 'end_date' => '2026-01-11',
+            'year' => 2026, 'week_number' => 1, 'start_date' => '2025-12-29', 'end_date' => '2026-01-05',
         ]);
 
-        Carbon::setTestNow(Carbon::parse('2026-01-06 12:00:00', 'Europe/Kyiv'));
+        Carbon::setTestNow(Carbon::parse('2026-01-02 12:00:00', 'Europe/Kyiv'));
 
         $action = app(WeeklyCloseAction::class);
         $closed = $action->execute(force: true);

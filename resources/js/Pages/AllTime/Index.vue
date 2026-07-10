@@ -5,28 +5,26 @@ import RankingTable from '../../Components/RankingTable.vue';
 
 defineOptions({ layout: AppLayout });
 
-const props = defineProps({
+defineProps({
     totalDistance: Number,
     totalTorcoins: Number,
     participantsCount: Number,
     rankings: Array,
 });
-
-function formatKm(value) {
-    return new Intl.NumberFormat('uk-UA', { maximumFractionDigits: 0 }).format(value);
-}
 </script>
 
 <template>
     <div class="space-y-6">
-        <h1 class="text-2xl font-extrabold text-white">🌍 Рейтинг за весь час</h1>
+        <h1 class="text-2xl font-extrabold text-brand-950">🌍 Рейтинг за весь час</h1>
 
-        <div class="grid grid-cols-3 gap-3 sm:max-w-lg">
-            <StatCard label="Дистанція" :value="`${formatKm(totalDistance)} км`" />
+        <div data-reveal class="grid grid-cols-3 gap-3 sm:max-w-lg lg:max-w-none">
+            <StatCard label="Дистанція" :value="totalDistance" suffix=" км" />
             <StatCard label="Учасників" :value="participantsCount" />
             <StatCard label="Torcoins" :value="totalTorcoins" />
         </div>
 
-        <RankingTable :rows="rankings" :show-rides="true" :show-torcoins="true" :show-weeks-active="true" :show-last-activity="true" />
+        <div data-reveal>
+            <RankingTable :rows="rankings" :show-rides="true" :show-torcoins="true" :show-weeks-active="true" :show-last-activity="true" />
+        </div>
     </div>
 </template>

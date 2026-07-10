@@ -11,7 +11,7 @@ class AdminUserSeeder extends Seeder
     {
         User::firstOrCreate(
             ['email' => 'admin@velotor.ride'],
-            ['name' => 'Адміністратор', 'password' => 'password']
+            ['name' => 'Адміністратор', 'username' => 'admin', 'password' => 'password']
         );
     }
 }

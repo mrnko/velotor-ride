@@ -1,0 +1,15 @@
+{
+    "name": "Велоклуб «ВелоТОР»",
+    "short_name": "ВелоТОР",
+    "description": "Результати велозаїздів учасників велоклубу «ВелоТОР»",
+    "lang": "uk",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#f5f7ff",
+    "theme_color": "#0032f9",
+    "icons": [
+        { "src": "/images/favicons/favicon-32x32.png", "sizes": "32x32", "type": "image/png" },
+        { "src": "/images/favicons/favicon-96x96.png", "sizes": "96x96", "type": "image/png" },
+        { "src": "/images/favicons/android-icon-192x192.png", "sizes": "192x192", "type": "image/png" }
+    ]
+}

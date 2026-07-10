@@ -27,7 +27,7 @@ class AppServiceProvider extends ServiceProvider
     /**
      * The admin panel lets the timezone be changed from the `settings`
      * table; apply it over the .env default so every date calculation
-     * (week windows, the Sunday close job, displayed dates) stays
+     * (week windows, the Monday close job, displayed dates) stays
      * consistent without needing a deploy. Guarded so artisan commands
      * that run before the `settings` table exists (fresh install,
      * migrations themselves) don't break.

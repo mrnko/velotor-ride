@@ -7,13 +7,13 @@ const props = defineProps({
 
 <template>
     <div>
-        <div v-if="label" class="mb-1.5 flex justify-between text-xs text-slate-400">
+        <div v-if="label" class="mb-1.5 flex justify-between text-xs text-slate-500">
             <span>{{ label }}</span>
             <span>{{ Math.round(percent) }}%</span>
         </div>
-        <div class="h-2.5 w-full overflow-hidden rounded-full bg-slate-800">
+        <div class="h-2.5 w-full overflow-hidden rounded-full bg-brand-100">
             <div
-                class="h-full rounded-full bg-gradient-to-r from-amber-500 to-amber-300 transition-all duration-500"
+                class="bg-brand-gradient h-full rounded-full transition-all duration-500"
                 :style="{ width: `${Math.min(100, Math.max(0, props.percent))}%` }"
             />
         </div>

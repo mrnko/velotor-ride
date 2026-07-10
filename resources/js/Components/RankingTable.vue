@@ -3,6 +3,7 @@ import { computed, ref } from 'vue';
 import { Link } from '@inertiajs/vue3';
 import TorcoinBadge from './TorcoinBadge.vue';
 import EmptyState from './EmptyState.vue';
+import Avatar from './Avatar.vue';
 
 const props = defineProps({
     rows: { type: Array, required: true },
@@ -41,11 +42,15 @@ const filtered = computed(() => {
     return rows;
 });
 
+function userHref(row) {
+    return `/stat/user/${row.slug ?? row.participant_id}`;
+}
+
 function rankBadgeClass(rank) {
-    if (rank === 1) return 'bg-amber-400/15 text-amber-300 ring-amber-400/40';
-    if (rank === 2) return 'bg-slate-300/15 text-slate-200 ring-slate-300/30';
-    if (rank === 3) return 'bg-orange-700/20 text-orange-300 ring-orange-600/40';
-    return 'bg-slate-800 text-slate-400 ring-slate-700';
+    if (rank === 1) return 'bg-gold-400/20 text-gold-500 ring-gold-400/50';
+    if (rank === 2) return 'bg-slate-200 text-slate-600 ring-slate-300';
+    if (rank === 3) return 'bg-orange-100 text-orange-600 ring-orange-300';
+    return 'bg-brand-50 text-brand-600 ring-brand-100';
 }
 
 function formatKm(value) {
@@ -65,14 +70,14 @@ function formatDate(value) {
                 v-model="search"
                 type="search"
                 placeholder="Пошук учасника…"
-                class="w-full max-w-xs rounded-lg border border-slate-800 bg-slate-900/60 px-3 py-2 text-sm text-slate-100 placeholder-slate-500 focus:border-amber-400 focus:outline-none focus:ring-1 focus:ring-amber-400"
+                class="w-full max-w-xs rounded-xl border border-brand-100 bg-white px-3 py-2 text-sm text-slate-700 placeholder-slate-400 focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-200"
             />
         </div>
 
         <EmptyState
             v-if="!rows.length"
             title="Ще немає результатів"
-            description="Як тільки хтось надішле результат у Telegram-чат, тут з'явиться рейтинг."
+            description="Як тільки хтось надішле результат у Telegram-чат, тут зʼявиться рейтинг."
         />
 
         <EmptyState
@@ -84,34 +89,38 @@ function formatDate(value) {
 
         <template v-else>
             <!-- Desktop / tablet table -->
-            <div class="hidden overflow-hidden rounded-2xl border border-slate-800 sm:block">
+            <div class="surface-card hidden overflow-hidden rounded-2xl sm:block">
                 <table class="w-full text-sm">
-                    <thead class="bg-slate-900/80 text-left text-xs uppercase tracking-wide text-slate-500">
+                    <thead class="bg-brand-50/60 text-left text-xs uppercase tracking-wide text-slate-400">
                         <tr>
-                            <th class="px-4 py-3 font-medium">#</th>
-                            <th class="cursor-pointer select-none px-4 py-3 font-medium hover:text-slate-300" @click="sortBy('name')">Ім'я</th>
-                            <th class="cursor-pointer select-none px-4 py-3 text-right font-medium hover:text-slate-300" @click="sortBy('distance_km')">Км</th>
-                            <th v-if="showRides" class="cursor-pointer select-none px-4 py-3 text-right font-medium hover:text-slate-300" @click="sortBy('rides_count')">Заїздів</th>
-                            <th v-if="showWeeksActive" class="px-4 py-3 text-right font-medium">Тижнів</th>
-                            <th v-if="showTorcoins" class="px-4 py-3 text-right font-medium">Torcoins</th>
-                            <th v-if="showLastActivity" class="px-4 py-3 text-right font-medium">Активність</th>
+                            <th class="px-4 py-3 font-semibold">#</th>
+                            <th class="cursor-pointer select-none px-4 py-3 font-semibold hover:text-brand-600" @click="sortBy('name')">Імʼя</th>
+                            <th class="cursor-pointer select-none px-4 py-3 text-right font-semibold hover:text-brand-600" @click="sortBy('distance_km')">Км</th>
+                            <th v-if="showRides" class="cursor-pointer select-none px-4 py-3 text-right font-semibold hover:text-brand-600" @click="sortBy('rides_count')">Заїздів</th>
+                            <th v-if="showWeeksActive" class="px-4 py-3 text-right font-semibold">Тижнів</th>
+                            <th v-if="showTorcoins" class="px-4 py-3 text-right font-semibold">Torcoins</th>
+                            <th v-if="showLastActivity" class="px-4 py-3 text-right font-semibold">Активність</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-slate-800/70">
-                        <tr v-for="row in filtered" :key="row.participant_id" class="transition hover:bg-slate-900/50">
+                    <tbody class="divide-y divide-brand-50">
+                        <tr v-for="row in filtered" :key="row.participant_id" class="transition hover:bg-brand-50/50">
                             <td class="px-4 py-3">
                                 <span class="inline-flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold ring-1 ring-inset" :class="rankBadgeClass(row.rank)">
                                     {{ row.rank }}
                                 </span>
                             </td>
-                            <td class="px-4 py-3 font-medium text-slate-100">
-                                <Link :href="`/participants/${row.participant_id}`" class="hover:text-amber-300">{{ row.name }}</Link>
+                            <td class="px-4 py-3">
+                                <Link :href="userHref(row)" class="flex items-center gap-3 font-medium text-brand-950 transition-colors hover:text-brand-600">
+                                    <Avatar :src="row.avatar_url" :name="row.name" :initials="row.initials" size="sm" />
+                                    <span class="truncate">{{ row.name }}</span>
+                                    <span v-if="row.rank === 1" class="text-sm" aria-hidden="true">👑</span>
+                                </Link>
                             </td>
-                            <td class="px-4 py-3 text-right tabular-nums text-slate-200">{{ formatKm(row.distance_km) }}</td>
-                            <td v-if="showRides" class="px-4 py-3 text-right tabular-nums text-slate-400">{{ row.rides_count }}</td>
-                            <td v-if="showWeeksActive" class="px-4 py-3 text-right tabular-nums text-slate-400">{{ row.weeks_active }}</td>
+                            <td class="px-4 py-3 text-right font-semibold tabular-nums text-slate-700">{{ formatKm(row.distance_km) }}</td>
+                            <td v-if="showRides" class="px-4 py-3 text-right tabular-nums text-slate-500">{{ row.rides_count }}</td>
+                            <td v-if="showWeeksActive" class="px-4 py-3 text-right tabular-nums text-slate-500">{{ row.weeks_active }}</td>
                             <td v-if="showTorcoins" class="px-4 py-3 text-right"><TorcoinBadge :value="row.torcoins" size="sm" /></td>
-                            <td v-if="showLastActivity" class="px-4 py-3 text-right text-xs text-slate-500">{{ formatDate(row.last_activity) }}</td>
+                            <td v-if="showLastActivity" class="px-4 py-3 text-right text-xs text-slate-400">{{ formatDate(row.last_activity) }}</td>
                         </tr>
                     </tbody>
                 </table>
@@ -119,20 +128,21 @@ function formatDate(value) {
 
             <!-- Mobile card list -->
             <ul class="space-y-2 sm:hidden">
-                <li v-for="row in filtered" :key="row.participant_id" class="rounded-xl border border-slate-800 bg-slate-900/50 p-3">
-                    <Link :href="`/participants/${row.participant_id}`" class="flex items-center gap-3">
-                        <span class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold ring-1 ring-inset" :class="rankBadgeClass(row.rank)">
+                <li v-for="row in filtered" :key="row.participant_id" class="surface-card rounded-xl p-3">
+                    <Link :href="userHref(row)" class="flex items-center gap-3">
+                        <span class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold ring-1 ring-inset" :class="rankBadgeClass(row.rank)">
                             {{ row.rank }}
                         </span>
+                        <Avatar :src="row.avatar_url" :name="row.name" :initials="row.initials" size="sm" />
                         <span class="min-w-0 flex-1">
-                            <span class="block truncate font-medium text-slate-100">{{ row.name }}</span>
-                            <span class="block text-xs text-slate-500">
+                            <span class="block truncate font-medium text-brand-950">{{ row.name }} <span v-if="row.rank === 1" aria-hidden="true">👑</span></span>
+                            <span class="block text-xs text-slate-400">
                                 <template v-if="showRides">{{ row.rides_count }} заїздів</template>
                                 <template v-if="showWeeksActive"> · {{ row.weeks_active }} тижнів</template>
                             </span>
                         </span>
                         <span class="shrink-0 text-right">
-                            <span class="block font-semibold tabular-nums text-slate-100">{{ formatKm(row.distance_km) }} км</span>
+                            <span class="block font-semibold tabular-nums text-brand-950">{{ formatKm(row.distance_km) }} км</span>
                             <TorcoinBadge v-if="showTorcoins" :value="row.torcoins" size="sm" class="mt-1" />
                         </span>
                     </Link>

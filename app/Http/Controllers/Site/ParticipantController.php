@@ -8,6 +8,7 @@ use App\Models\RideResult;
 use App\Services\Stats\LeaderboardService;
 use App\Services\Torcoins\TorcoinCalculator;
 use App\Services\Weeks\WeekResolverService;
+use App\Support\Seo;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -26,13 +27,27 @@ class ParticipantController extends Controller
 
         $bestWeeks = $history->sortByDesc('distance_km')->take(5)->values();
 
+        // Last 12 weeks of this participant's distance for the weekly chart.
+        $weeklyChart = $history->take(12)->reverse()->values()->map(fn ($row) => [
+            'label' => 'Т'.$row->week_number,
+            'title' => $row->title,
+            'distance_km' => round((float) $row->distance_km, 1),
+        ]);
+
+        $profileUrl = route('stat.participants.show', $participant->slug);
+
         return Inertia::render('Participant/Show', [
             'participant' => [
                 'id' => $participant->id,
+                'slug' => $participant->slug,
                 'display_name' => $participant->display_name,
+                'initials' => $participant->initials(),
+                'avatar_url' => $participant->avatar_url,
                 'telegram_username' => $participant->telegram_username,
                 'last_seen_at' => $participant->last_seen_at?->toDateTimeString(),
+                'profile_url' => $profileUrl,
             ],
+            'weeklyChart' => $weeklyChart,
             'stats' => [
                 'rank_week' => $summary['rank_week'],
                 'rank_year' => $summary['rank_year'],
@@ -58,6 +73,21 @@ class ParticipantController extends Controller
                 'title' => $row->title,
                 'distance_km' => (float) $row->distance_km,
             ]),
+            'seo' => Seo::make(
+                title: $participant->display_name,
+                description: "{$participant->display_name} у велоклубі «ВелоТОР»: {$summary['all_time_distance']} км за весь час, {$summary['torcoins_all_time']} Torcoins.",
+                canonical: $profileUrl,
+                type: 'profile',
+                schema: [
+                    '@context' => 'https://schema.org',
+                    '@type' => 'ProfilePage',
+                    'mainEntity' => [
+                        '@type' => 'Person',
+                        'name' => $participant->display_name,
+                        'url' => $profileUrl,
+                    ],
+                ],
+            ),
         ]);
     }
 }

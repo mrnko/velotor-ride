@@ -9,26 +9,38 @@ use App\Http\Controllers\Admin\WeeklyPeriodController;
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Site\AllTimeController;
 use App\Http\Controllers\Site\HomeController;
+use App\Http\Controllers\Site\LandingController;
 use App\Http\Controllers\Site\ParticipantController;
+use App\Http\Controllers\Site\PrivacyController;
 use App\Http\Controllers\Site\RulesController;
+use App\Http\Controllers\Site\SitemapController;
 use App\Http\Controllers\Site\WeekController;
 use App\Http\Controllers\Site\YearController;
 use App\Http\Controllers\TelegramWebhookController;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', HomeController::class)->name('home');
+/*
+| Public informational homepage lives at the domain root; all statistics and
+| stats functionality live under the /stat/* prefix.
+*/
+Route::get('/', LandingController::class)->name('home');
+Route::get('/privacy-policy', PrivacyController::class)->name('privacy');
+Route::get('/sitemap.xml', SitemapController::class)->name('sitemap');
 
-Route::get('/week', [WeekController::class, 'current'])->name('week.current');
-Route::get('/weeks/{year?}', [WeekController::class, 'archive'])->whereNumber('year')->name('week.archive');
-Route::get('/weeks/{year}/{weekNumber}', [WeekController::class, 'show'])->whereNumber(['year', 'weekNumber'])->name('week.show');
+Route::prefix('stat')->name('stat.')->group(function () {
+    Route::get('/', HomeController::class)->name('home');
 
-Route::get('/year/{year?}', [YearController::class, 'show'])->whereNumber('year')->name('year.show');
+    Route::get('/weeks/{year?}', [WeekController::class, 'archive'])->whereNumber('year')->name('week.archive');
+    Route::get('/weeks/{year}/{weekNumber}', [HomeController::class, 'show'])->whereNumber(['year', 'weekNumber'])->name('week.show');
 
-Route::get('/all-time', AllTimeController::class)->name('all-time');
+    Route::get('/year/{year?}', [YearController::class, 'show'])->whereNumber('year')->name('year.show');
 
-Route::get('/participants/{participant}', [ParticipantController::class, 'show'])->name('participants.show');
+    Route::get('/all-time', AllTimeController::class)->name('all-time');
 
-Route::get('/rules', RulesController::class)->name('rules');
+    Route::get('/user/{participant:slug}', [ParticipantController::class, 'show'])->name('participants.show');
+
+    Route::get('/rules', RulesController::class)->name('rules');
+});
 
 Route::post('/telegram/webhook', [TelegramWebhookController::class, 'handle'])
     ->middleware('telegram.webhook')

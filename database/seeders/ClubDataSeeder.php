@@ -75,9 +75,9 @@ class ClubDataSeeder extends Seeder
         $firstStart = $currentStart->copy()->subWeeks(60);
 
         $period = WeeklyPeriod::create([
-            'year' => $firstStart->year,
-            'week_number' => 1,
-            'title' => "Тиждень 1 / {$firstStart->year}",
+            'year' => (int) $firstStart->isoWeekYear,
+            'week_number' => (int) $firstStart->isoWeek,
+            'title' => "Тиждень {$firstStart->isoWeek} / {$firstStart->isoWeekYear}",
             'start_date' => $firstStart,
             'end_date' => $firstStart->copy()->addDays(7),
             'status' => 'active',

@@ -22,18 +22,19 @@ class WeekResolverServiceTest extends TestCase
 
         $this->assertSame(1, WeeklyPeriod::count());
         $this->assertTrue($period->isActive());
-        $this->assertSame(1, $period->week_number);
+        $this->assertSame((int) $period->start_date->isoWeek, $period->week_number);
+        $this->assertSame((int) $period->start_date->isoWeekYear, $period->year);
     }
 
-    public function test_compute_window_for_date_returns_sunday_to_sunday(): void
+    public function test_compute_window_for_date_returns_monday_to_monday(): void
     {
         $service = new WeekResolverService();
 
-        // Wednesday 2026-07-08 -> week should start Sunday 2026-07-05.
+        // Wednesday 2026-07-08 -> week starts Monday 2026-07-06.
         [$start, $end] = $service->computeWindowForDate(Carbon::parse('2026-07-08 15:00:00', 'Europe/Kyiv'));
 
-        $this->assertSame('2026-07-05', $start->toDateString());
-        $this->assertSame('2026-07-12', $end->toDateString());
+        $this->assertSame('2026-07-06', $start->toDateString());
+        $this->assertSame('2026-07-13', $end->toDateString());
     }
 
     public function test_period_for_date_resolves_by_date_range_not_week_number(): void
@@ -43,8 +44,8 @@ class WeekResolverServiceTest extends TestCase
         $period = WeeklyPeriod::factory()->create([
             'year' => 2026,
             'week_number' => 10,
-            'start_date' => '2026-03-01',
-            'end_date' => '2026-03-08',
+            'start_date' => '2026-03-02',
+            'end_date' => '2026-03-09',
             'status' => 'closed',
         ]);
 
@@ -58,12 +59,12 @@ class WeekResolverServiceTest extends TestCase
     {
         $service = new WeekResolverService();
 
-        // Last week of 2026: Sunday 2026-12-27 -> Sunday 2027-01-03.
+        // ISO week 53 of 2026: Monday 2026-12-28 -> Monday 2027-01-04.
         $lastWeekOf2026 = WeeklyPeriod::factory()->create([
             'year' => 2026,
-            'week_number' => 52,
-            'start_date' => '2026-12-27',
-            'end_date' => '2027-01-03',
+            'week_number' => 53,
+            'start_date' => '2026-12-28',
+            'end_date' => '2027-01-04',
             'status' => 'active',
         ]);
 
@@ -71,8 +72,8 @@ class WeekResolverServiceTest extends TestCase
 
         $this->assertSame(2027, $next->year);
         $this->assertSame(1, $next->week_number);
-        $this->assertSame('2027-01-03', $next->start_date->toDateString());
-        $this->assertSame('2027-01-10', $next->end_date->toDateString());
+        $this->assertSame('2027-01-04', $next->start_date->toDateString());
+        $this->assertSame('2027-01-11', $next->end_date->toDateString());
     }
 
     public function test_same_year_rollover_increments_week_number(): void
@@ -81,16 +82,16 @@ class WeekResolverServiceTest extends TestCase
 
         $week = WeeklyPeriod::factory()->create([
             'year' => 2026,
-            'week_number' => 27,
-            'start_date' => '2026-07-05',
-            'end_date' => '2026-07-12',
+            'week_number' => 28,
+            'start_date' => '2026-07-06',
+            'end_date' => '2026-07-13',
             'status' => 'active',
         ]);
 
         $next = $service->ensureNextPeriodExists($week);
 
         $this->assertSame(2026, $next->year);
-        $this->assertSame(28, $next->week_number);
+        $this->assertSame(29, $next->week_number);
     }
 
     public function test_ensure_next_period_is_idempotent(): void
@@ -99,9 +100,9 @@ class WeekResolverServiceTest extends TestCase
 
         $week = WeeklyPeriod::factory()->create([
             'year' => 2026,
-            'week_number' => 27,
-            'start_date' => '2026-07-05',
-            'end_date' => '2026-07-12',
+            'week_number' => 28,
+            'start_date' => '2026-07-06',
+            'end_date' => '2026-07-13',
             'status' => 'closed',
         ]);
 
@@ -109,6 +110,6 @@ class WeekResolverServiceTest extends TestCase
         $second = $service->ensureNextPeriodExists($week);
 
         $this->assertSame($first->id, $second->id);
-        $this->assertSame(1, WeeklyPeriod::where('week_number', 28)->count());
+        $this->assertSame(1, WeeklyPeriod::where('week_number', 29)->count());
     }
 }

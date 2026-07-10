@@ -6,7 +6,7 @@ import RankingTable from '../../Components/RankingTable.vue';
 
 defineOptions({ layout: AppLayout });
 
-const props = defineProps({
+defineProps({
     year: Number,
     availableYears: Array,
     totalDistance: Number,
@@ -16,34 +16,32 @@ const props = defineProps({
 });
 
 function goToYear(event) {
-    router.get(`/year/${event.target.value}`, {}, { preserveScroll: true });
-}
-
-function formatKm(value) {
-    return new Intl.NumberFormat('uk-UA', { maximumFractionDigits: 0 }).format(value);
+    router.get(`/stat/year/${event.target.value}`, {}, { preserveScroll: true });
 }
 </script>
 
 <template>
     <div class="space-y-6">
         <div class="flex flex-wrap items-center justify-between gap-3">
-            <h1 class="text-2xl font-extrabold text-white">Рейтинг {{ year }} року</h1>
+            <h1 class="text-2xl font-extrabold text-brand-950">Рейтинг {{ year }} року</h1>
 
             <select
                 :value="year"
-                class="rounded-lg border border-slate-800 bg-slate-900/60 px-3 py-2 text-sm text-slate-100 focus:border-amber-400 focus:outline-none focus:ring-1 focus:ring-amber-400"
+                class="rounded-xl border border-brand-100 bg-white px-3 py-2 text-sm text-slate-700 focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-200"
                 @change="goToYear"
             >
                 <option v-for="y in availableYears" :key="y" :value="y">{{ y }}</option>
             </select>
         </div>
 
-        <div class="grid grid-cols-3 gap-3 sm:max-w-lg">
-            <StatCard label="Дистанція" :value="`${formatKm(totalDistance)} км`" />
+        <div data-reveal class="grid grid-cols-3 gap-3 sm:max-w-lg lg:max-w-none">
+            <StatCard label="Дистанція" :value="totalDistance" suffix=" км" />
             <StatCard label="Учасників" :value="participantsCount" />
             <StatCard label="Torcoins" :value="totalTorcoins" />
         </div>
 
-        <RankingTable :rows="rankings" :show-rides="true" :show-torcoins="true" />
+        <div data-reveal>
+            <RankingTable :rows="rankings" :show-rides="true" :show-torcoins="true" />
+        </div>
     </div>
 </template>

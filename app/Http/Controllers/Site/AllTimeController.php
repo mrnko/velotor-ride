@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\RideResult;
 use App\Services\Stats\LeaderboardService;
 use App\Services\Torcoins\TorcoinCalculator;
+use App\Support\Seo;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -32,6 +33,9 @@ class AllTimeController extends Controller
                 return [
                     'rank' => $row['rank'],
                     'participant_id' => $row['participant']->id,
+                    'slug' => $row['participant']->slug,
+                    'avatar_url' => $row['participant']->avatar_url,
+                    'initials' => $row['participant']->initials(),
                     'name' => $row['participant']->display_name,
                     'distance_km' => $row['distance_km'],
                     'rides_count' => $row['rides_count'],
@@ -40,6 +44,10 @@ class AllTimeController extends Controller
                     'last_activity' => $extra?->last_activity,
                 ];
             }),
+            'seo' => Seo::make(
+                title: 'Рейтинг за весь час',
+                description: 'Загальний рейтинг велоклубу «ВелоТОР» за весь час: кілометраж, активні тижні та Torcoins кожного учасника.',
+            ),
         ]);
     }
 }

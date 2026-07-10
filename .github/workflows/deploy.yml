@@ -1,0 +1,86 @@
+name: Deploy ВелоТОР
+
+# Deploy to the production server over SSH after every push to main.
+#
+# Required repository secrets (Settings → Secrets and variables → Actions):
+#   DEPLOY_HOST     — server hostname or IP
+#   DEPLOY_USER     — SSH user
+#   DEPLOY_SSH_KEY  — private SSH key (PEM) authorised on the server
+#   DEPLOY_PORT     — SSH port (e.g. 22)
+#   DEPLOY_PATH     — absolute path to the project root on the server
+#
+# No passwords, keys or .env values live in this repository — everything
+# sensitive comes from GitHub Secrets, and .env stays only on the server
+# (including TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID, which this workflow
+# never touches).
+
+on:
+  push:
+    branches:
+      - main
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    # Vite bakes the app name into the built assets at build time. Without this
+    # the production bundle falls back to "Laravel" in the browser tab title.
+    env:
+      VITE_APP_NAME: "ВелоТОР"
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.2"
+          tools: composer
+
+      - name: Install PHP dependencies for frontend build
+        run: composer install --no-dev --prefer-dist --optimize-autoloader --no-interaction --no-progress
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install Node dependencies
+        run: npm ci
+
+      - name: Build frontend assets
+        run: npm run build
+
+      - name: Write deploy version
+        run: |
+          echo "Commit: $GITHUB_SHA" > public/deploy-version.txt
+          echo "Branch: $GITHUB_REF_NAME" >> public/deploy-version.txt
+          echo "Deployed at UTC: $(date -u +"%Y-%m-%d %H:%M:%S")" >> public/deploy-version.txt
+
+      - name: Upload frontend build to server
+        uses: appleboy/scp-action@v1
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          port: ${{ secrets.DEPLOY_PORT }}
+          source: "public/build,public/deploy-version.txt"
+          target: "${{ secrets.DEPLOY_PATH }}/.deploy/${{ github.sha }}"
+
+      - name: Run Laravel deploy on server
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          port: ${{ secrets.DEPLOY_PORT }}
+          script: |
+            cd ${{ secrets.DEPLOY_PATH }}
+            chmod +x deploy.sh
+            ./deploy.sh ".deploy/${{ github.sha }}/public/build"

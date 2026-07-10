@@ -30,7 +30,7 @@ class AdminPanelTest extends TestCase
     {
         $admin = $this->admin();
 
-        $this->post('/admin/login', ['email' => $admin->email, 'password' => 'password'])
+        $this->post('/admin/login', ['login' => $admin->email, 'password' => 'password'])
             ->assertRedirect('/admin');
 
         $this->actingAs($admin)->get('/admin')
@@ -42,8 +42,8 @@ class AdminPanelTest extends TestCase
     {
         $admin = $this->admin();
 
-        $this->post('/admin/login', ['email' => $admin->email, 'password' => 'wrong'])
-            ->assertSessionHasErrors('email');
+        $this->post('/admin/login', ['login' => $admin->email, 'password' => 'wrong'])
+            ->assertSessionHasErrors('login');
 
         $this->assertGuest();
     }

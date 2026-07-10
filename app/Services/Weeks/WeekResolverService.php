@@ -45,8 +45,8 @@ class WeekResolverService
     }
 
     /**
-     * Pure calculation: Sunday 00:00 (club timezone) through the following
-     * Sunday 00:00 (exclusive end). Aligned with the Sunday-00:00 close job,
+     * Pure calculation: Monday 00:00 (club timezone) through the following
+     * Monday 00:00 (exclusive end). Aligned with the Monday-00:00 close job,
      * so a period's end_date is exactly the instant the scheduler fires.
      * No DB access.
      *
@@ -56,7 +56,7 @@ class WeekResolverService
     {
         $start = $date->copy()
             ->timezone(config('velotor.timezone'))
-            ->startOfWeek(Carbon::SUNDAY)
+            ->startOfWeek(Carbon::MONDAY)
             ->startOfDay();
 
         return [$start, $start->copy()->addDays(7)];
@@ -65,9 +65,8 @@ class WeekResolverService
     /**
      * Given the period that was just closed, create the next one if it
      * doesn't already exist. Resets week_number to 1 and bumps year whenever
-     * the new window's Sunday falls in a different calendar year than the
-     * period being closed — this is what keeps (year, week_number) always
-     * unambiguous, unlike the legacy single ever-incrementing counter.
+     * ISO year and ISO week number are derived from the new Monday. This
+     * keeps year/week labels correct around New Year.
      */
     public function ensureNextPeriodExists(WeeklyPeriod $justClosed): WeeklyPeriod
     {
@@ -80,13 +79,8 @@ class WeekResolverService
             return $existing;
         }
 
-        if ($start->year === (int) $justClosed->year) {
-            $year = (int) $justClosed->year;
-            $weekNumber = $justClosed->week_number + 1;
-        } else {
-            $year = $start->year;
-            $weekNumber = 1;
-        }
+        $year = (int) $start->isoWeekYear;
+        $weekNumber = (int) $start->isoWeek;
 
         return WeeklyPeriod::create([
             'year' => $year,
@@ -109,10 +103,13 @@ class WeekResolverService
             return $existing;
         }
 
+        $year = (int) $start->isoWeekYear;
+        $weekNumber = (int) $start->isoWeek;
+
         return WeeklyPeriod::create([
-            'year' => $start->year,
-            'week_number' => 1,
-            'title' => "Тиждень 1 / {$start->year}",
+            'year' => $year,
+            'week_number' => $weekNumber,
+            'title' => "Тиждень {$weekNumber} / {$year}",
             'start_date' => $start,
             'end_date' => $end,
             'status' => 'active',

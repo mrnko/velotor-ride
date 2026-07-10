@@ -12,6 +12,8 @@ class RideResult extends Model
     use HasFactory;
 
     protected $fillable = [
+        'legacy_source',
+        'legacy_id',
         'participant_id',
         'weekly_period_id',
         'distance_km',

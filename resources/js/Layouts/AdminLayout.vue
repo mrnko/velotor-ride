@@ -22,7 +22,10 @@ function logout() {
         <header class="border-b border-slate-800/80 bg-slate-950/90">
             <div class="mx-auto max-w-6xl px-4 sm:px-6">
                 <div class="flex h-16 items-center justify-between">
-                    <Link href="/admin" class="font-bold tracking-tight">🚴 Адмінка</Link>
+                    <Link href="/admin" class="flex items-center gap-2 font-bold tracking-tight">
+                        <img src="/images/logo.png" alt="ВелоТОР" class="h-8 w-8 object-contain" />
+                        Адмінка
+                    </Link>
                     <button type="button" class="text-sm text-slate-400 hover:text-white" @click="logout">Вийти</button>
                 </div>
                 <nav class="flex flex-wrap gap-1 pb-3">

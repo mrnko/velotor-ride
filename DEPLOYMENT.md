@@ -80,8 +80,10 @@ server {
 * * * * * cd /var/www/velotor-ride && php artisan schedule:run >> /dev/null 2>&1
 ```
 
-Це і закриває тиждень щонеділі о 00:00 (`week:close`), і виконує будь-які
-інші заплановані команди в майбутньому. Черг/воркерів не потрібно.
+Це закриває тиждень щопонеділка о 00:00 (`week:close`), надсилає нагадування
+в чат за 2 години та за 1 годину до закриття (`week:remind`, неділя 22:00 та
+23:00 за `VELOTOR_TIMEZONE`), і виконує будь-які інші заплановані команди в
+майбутньому. Черг/воркерів не потрібно.
 
 ## 5. Telegram webhook
 
@@ -102,6 +104,30 @@ curl -X POST "https://api.telegram.org/bot<TELEGRAM_BOT_TOKEN>/setWebhook" \
    подивившись `getUpdates`/лог `bot_message_logs`).
 
 ## 6. Оновлення (деплой нової версії)
+
+### Автоматично, через GitHub Actions (рекомендовано)
+
+Кожен push у `main` збирає фронтенд на GitHub-раннері та викладає готову
+збірку на сервер по SSH — сервер компілює лише `composer install` та
+`php artisan migrate`, Node.js на проді не потрібен.
+
+1. У репозиторії: **Settings → Secrets and variables → Actions** додати:
+   - `DEPLOY_HOST` — хост/IP сервера;
+   - `DEPLOY_USER` — SSH-користувач;
+   - `DEPLOY_SSH_KEY` — приватний SSH-ключ (PEM), авторизований на сервері;
+   - `DEPLOY_PORT` — SSH-порт (зазвичай `22`);
+   - `DEPLOY_PATH` — абсолютний шлях до проєкту на сервері (напр.
+     `/var/www/velotor-ride`).
+2. На сервері `deploy.sh` (у корені репозиторію) вже виконує: maintenance
+   mode → git reset --hard → composer install → підміна `public/build` на
+   готову збірку → migrate → optimize → вихід з maintenance mode.
+3. Секрети та `.env` (включно з `TELEGRAM_BOT_TOKEN`/`TELEGRAM_CHAT_ID`)
+   ніколи не потрапляють у репозиторій чи GitHub Actions — вони живуть лише
+   в `.env` на сервері, деплой їх не чіпає.
+
+Workflow: `.github/workflows/deploy.yml`. Скрипт: `deploy.sh`.
+
+### Вручну (без GitHub Actions)
 
 ```bash
 cd /var/www/velotor-ride
