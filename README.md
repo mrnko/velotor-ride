@@ -67,9 +67,13 @@ php artisan migrate --seed
 composer run dev
 ```
 
-Ця команда одночасно піднімає `php artisan serve`, Laravel-scheduler (для
-локальної перевірки cron), логи (`pail`) і Vite dev-сервер. Сайт буде
-доступний на `http://localhost:8000`.
+Ця команда одночасно піднімає `php artisan serve`, чергу (`queue:listen` —
+не використовується логікою проєкту, але йде в комплекті зі стандартним
+скриптом Laravel), логи (`pail`) і Vite dev-сервер. Сайт буде доступний на
+`http://localhost:8000`.
+
+Щоб локально перевірити закриття тижня без очікування неділі, просто
+викликайте команду вручну: `php artisan week:close`.
 
 Якщо потрібен лише сайт без hot-reload:
 
