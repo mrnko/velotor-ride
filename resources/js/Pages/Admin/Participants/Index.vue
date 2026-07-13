@@ -1,6 +1,6 @@
 <script setup>
 import { ref } from 'vue';
-import { router } from '@inertiajs/vue3';
+import { router, useForm } from '@inertiajs/vue3';
 import AdminLayout from '../../../Layouts/AdminLayout.vue';
 
 defineOptions({ layout: AdminLayout });
@@ -12,6 +12,30 @@ const props = defineProps({
 const mergingId = ref(null);
 const targetId = ref('');
 const copiedId = ref(null);
+
+const editingId = ref(null);
+const editForm = useForm({ display_name: '', telegram_username: '' });
+
+function startEdit(p) {
+    cancelMerge();
+    editingId.value = p.id;
+    editForm.clearErrors();
+    editForm.display_name = p.display_name;
+    editForm.telegram_username = p.telegram_username ?? '';
+}
+
+function cancelEdit() {
+    editingId.value = null;
+    editForm.reset();
+    editForm.clearErrors();
+}
+
+function saveEdit(p) {
+    editForm.put(`/admin/participants/${p.id}`, {
+        preserveScroll: true,
+        onSuccess: () => cancelEdit(),
+    });
+}
 
 async function copyUrl(p) {
     if (! p.profile_url) return;
@@ -27,6 +51,7 @@ async function copyUrl(p) {
 }
 
 function startMerge(p) {
+    cancelEdit();
     mergingId.value = p.id;
     targetId.value = p.possible_duplicates.length === 1 ? p.possible_duplicates[0].id : '';
 }
@@ -106,22 +131,83 @@ function confirmMerge(duplicate) {
                             <td class="px-4 py-3 text-right tabular-nums">{{ p.torcoins_all_time }}</td>
                             <td class="px-4 py-3 text-slate-500">{{ p.last_seen_at }}</td>
                             <td class="px-4 py-3">
-                                <button
-                                    v-if="mergingId !== p.id"
-                                    type="button"
-                                    class="text-xs font-medium text-amber-400 hover:text-amber-300"
-                                    @click="startMerge(p)"
-                                >
-                                    Об'єднати
-                                </button>
-                                <button
-                                    v-else
-                                    type="button"
-                                    class="text-xs font-medium text-slate-400 hover:text-white"
-                                    @click="cancelMerge"
-                                >
-                                    Скасувати
-                                </button>
+                                <div class="flex items-center gap-3">
+                                    <button
+                                        v-if="editingId !== p.id"
+                                        type="button"
+                                        class="text-xs font-medium text-sky-400 hover:text-sky-300"
+                                        @click="startEdit(p)"
+                                    >
+                                        Редагувати
+                                    </button>
+                                    <button
+                                        v-else
+                                        type="button"
+                                        class="text-xs font-medium text-slate-400 hover:text-white"
+                                        @click="cancelEdit"
+                                    >
+                                        Скасувати
+                                    </button>
+                                    <button
+                                        v-if="mergingId !== p.id"
+                                        type="button"
+                                        class="text-xs font-medium text-amber-400 hover:text-amber-300"
+                                        @click="startMerge(p)"
+                                    >
+                                        Об'єднати
+                                    </button>
+                                    <button
+                                        v-else
+                                        type="button"
+                                        class="text-xs font-medium text-slate-400 hover:text-white"
+                                        @click="cancelMerge"
+                                    >
+                                        Скасувати
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+
+                        <tr v-if="editingId === p.id" class="bg-slate-900/70">
+                            <td colspan="8" class="px-4 py-3">
+                                <form class="flex flex-wrap items-start gap-4" @submit.prevent="saveEdit(p)">
+                                    <label class="flex flex-col gap-1">
+                                        <span class="text-xs font-medium text-slate-400">Ім'я</span>
+                                        <input
+                                            v-model="editForm.display_name"
+                                            type="text"
+                                            class="w-64 rounded-lg border border-slate-800 bg-slate-950 px-2 py-1.5 text-sm focus:border-amber-400 focus:outline-none focus:ring-1 focus:ring-amber-400"
+                                        />
+                                        <span v-if="editForm.errors.display_name" class="text-xs text-rose-400">{{ editForm.errors.display_name }}</span>
+                                    </label>
+                                    <label class="flex flex-col gap-1">
+                                        <span class="text-xs font-medium text-slate-400">Telegram-логін</span>
+                                        <input
+                                            v-model="editForm.telegram_username"
+                                            type="text"
+                                            placeholder="без @"
+                                            class="w-52 rounded-lg border border-slate-800 bg-slate-950 px-2 py-1.5 text-sm focus:border-amber-400 focus:outline-none focus:ring-1 focus:ring-amber-400"
+                                        />
+                                        <span v-if="editForm.errors.telegram_username" class="text-xs text-rose-400">{{ editForm.errors.telegram_username }}</span>
+                                    </label>
+                                    <div class="flex items-center gap-2 pt-5">
+                                        <button
+                                            type="submit"
+                                            :disabled="editForm.processing || ! editForm.display_name.trim()"
+                                            class="rounded-lg bg-amber-500 px-3 py-1.5 text-xs font-semibold text-slate-950 hover:bg-amber-400 disabled:opacity-60"
+                                        >
+                                            Зберегти
+                                        </button>
+                                        <button
+                                            type="button"
+                                            class="rounded-lg border border-slate-700 px-3 py-1.5 text-xs font-medium text-slate-300 hover:bg-slate-800"
+                                            @click="cancelEdit"
+                                        >
+                                            Скасувати
+                                        </button>
+                                    </div>
+                                    <p class="w-full text-xs text-slate-500">Зміна імені автоматично оновить URL профілю (slug).</p>
+                                </form>
                             </td>
                         </tr>
                         <tr v-if="mergingId === p.id" class="bg-slate-900/70">

@@ -98,6 +98,38 @@ class ParticipantController extends Controller
     }
 
     /**
+     * Edit a participant's display name and Telegram username from the admin.
+     * Renaming regenerates the slug so the public profile URL follows the new
+     * name; uniqueSlug() keeps it unique and excludes this participant on
+     * collision, so re-saving an unchanged name is a no-op.
+     */
+    public function update(Request $request, Participant $participant): RedirectResponse
+    {
+        $validated = $request->validate([
+            'display_name' => ['required', 'string', 'max:255'],
+            'telegram_username' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        $username = $validated['telegram_username'] ?? null;
+        if ($username !== null) {
+            $username = ltrim(trim($username), '@');
+            $username = $username === '' ? null : $username;
+        }
+
+        $participant->display_name = $validated['display_name'];
+        $participant->telegram_username = $username;
+
+        if ($participant->isDirty('display_name')) {
+            $participant->slug = $participant->uniqueSlug($validated['display_name']);
+        }
+
+        $participant->save();
+
+        return redirect()->route('admin.participants.index')
+            ->with('success', "Дані учасника «{$participant->display_name}» оновлено.");
+    }
+
+    /**
      * Merge a duplicate participant into another one, e.g. a legacy-imported
      * record (synthetic telegram_user_id, full ride history) and the same
      * person's real Telegram account created later by the bot. All ride

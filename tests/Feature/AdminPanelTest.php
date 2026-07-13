@@ -58,6 +58,52 @@ class AdminPanelTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page->component('Admin/Participants/Index')->has('participants', 3));
     }
 
+    public function test_admin_can_edit_participant_name_and_username_and_slug_follows(): void
+    {
+        $participant = Participant::factory()->create([
+            'display_name' => 'Іван Петров',
+            'slug' => 'ivan-petrov',
+            'telegram_username' => 'old_user',
+        ]);
+
+        $this->actingAs($this->admin())
+            ->put("/admin/participants/{$participant->id}", [
+                'display_name' => 'Петро Іваненко',
+                'telegram_username' => '@petro_new',
+            ])
+            ->assertRedirect('/admin/participants');
+
+        $participant->refresh();
+        $this->assertSame('Петро Іваненко', $participant->display_name);
+        $this->assertSame('petro_new', $participant->telegram_username); // leading @ stripped
+        $this->assertSame(\App\Support\Transliterate::slug('Петро Іваненко'), $participant->slug);
+        $this->assertNotSame('ivan-petrov', $participant->slug);
+    }
+
+    public function test_editing_participant_requires_a_name(): void
+    {
+        $participant = Participant::factory()->create(['display_name' => 'Іван Петров']);
+
+        $this->actingAs($this->admin())
+            ->put("/admin/participants/{$participant->id}", ['display_name' => ''])
+            ->assertSessionHasErrors('display_name');
+    }
+
+    public function test_renaming_to_an_existing_name_gets_a_unique_slug(): void
+    {
+        $base = \App\Support\Transliterate::slug('Олег Сидоренко');
+        Participant::factory()->create(['display_name' => 'Олег Сидоренко', 'slug' => $base]);
+        $other = Participant::factory()->create(['display_name' => 'Хтось Інший']);
+
+        $this->actingAs($this->admin())
+            ->put("/admin/participants/{$other->id}", ['display_name' => 'Олег Сидоренко'])
+            ->assertRedirect();
+
+        $other->refresh();
+        $this->assertNotSame($base, $other->slug);
+        $this->assertStringStartsWith($base, $other->slug);
+    }
+
     public function test_admin_participants_page_flags_possible_duplicates_by_name(): void
     {
         $legacy = Participant::factory()->create(['display_name' => 'Alex Kh']);

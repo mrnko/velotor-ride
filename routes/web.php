@@ -62,6 +62,7 @@ Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
     Route::post('/recalculate', [DashboardController::class, 'recalculate'])->name('recalculate');
 
     Route::get('/participants', [AdminParticipantController::class, 'index'])->name('participants.index');
+    Route::put('/participants/{participant}', [AdminParticipantController::class, 'update'])->name('participants.update');
     Route::post('/participants/{participant}/merge', [AdminParticipantController::class, 'merge'])->name('participants.merge');
 
     Route::get('/ride-results', [RideResultController::class, 'index'])->name('ride-results.index');
