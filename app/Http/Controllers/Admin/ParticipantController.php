@@ -35,6 +35,10 @@ class ParticipantController extends Controller
                 return [
                     'id' => $participant->id,
                     'display_name' => $participant->display_name,
+                    'slug' => $participant->slug,
+                    'profile_url' => $participant->slug
+                        ? route('stat.participants.show', $participant->slug)
+                        : null,
                     'telegram_username' => $participant->telegram_username,
                     'telegram_user_id' => $participant->telegram_user_id,
                     'is_active' => $participant->is_active,

@@ -11,6 +11,20 @@ const props = defineProps({
 
 const mergingId = ref(null);
 const targetId = ref('');
+const copiedId = ref(null);
+
+async function copyUrl(p) {
+    if (! p.profile_url) return;
+    try {
+        await navigator.clipboard.writeText(p.profile_url);
+        copiedId.value = p.id;
+        setTimeout(() => {
+            if (copiedId.value === p.id) copiedId.value = null;
+        }, 1500);
+    } catch {
+        // Clipboard API unavailable (e.g. non-HTTPS) — the link is still visible to copy manually.
+    }
+}
 
 function startMerge(p) {
     mergingId.value = p.id;
@@ -41,11 +55,12 @@ function confirmMerge(duplicate) {
         <h1 class="text-2xl font-extrabold text-white">Учасники</h1>
 
         <div class="overflow-x-auto rounded-2xl border border-slate-800">
-            <table class="w-full min-w-[820px] text-sm">
+            <table class="w-full min-w-[1040px] text-sm">
                 <thead class="bg-slate-900/80 text-left text-xs uppercase tracking-wide text-slate-500">
                     <tr>
                         <th class="px-4 py-3">Ім'я</th>
                         <th class="px-4 py-3">Telegram</th>
+                        <th class="px-4 py-3">Профіль (URL)</th>
                         <th class="px-4 py-3 text-right">Км (усього)</th>
                         <th class="px-4 py-3 text-right">Заїздів</th>
                         <th class="px-4 py-3 text-right">Torcoins</th>
@@ -67,6 +82,25 @@ function confirmMerge(duplicate) {
                                 </span>
                             </td>
                             <td class="px-4 py-3 text-slate-400">{{ p.telegram_username ? `@${p.telegram_username}` : '—' }}</td>
+                            <td class="px-4 py-3">
+                                <div v-if="p.profile_url" class="flex items-center gap-2">
+                                    <a
+                                        :href="p.profile_url"
+                                        target="_blank"
+                                        rel="noopener"
+                                        class="block max-w-[240px] truncate text-xs font-medium text-sky-400 hover:text-sky-300 hover:underline"
+                                        :title="p.profile_url"
+                                    >{{ p.profile_url }}</a>
+                                    <button
+                                        type="button"
+                                        class="shrink-0 rounded border border-slate-700 px-1.5 py-0.5 text-[11px] text-slate-400 hover:bg-slate-800 hover:text-white"
+                                        @click="copyUrl(p)"
+                                    >
+                                        {{ copiedId === p.id ? 'Скопійовано' : 'Копіювати' }}
+                                    </button>
+                                </div>
+                                <span v-else class="text-slate-600">—</span>
+                            </td>
                             <td class="px-4 py-3 text-right tabular-nums">{{ p.total_distance }}</td>
                             <td class="px-4 py-3 text-right tabular-nums">{{ p.rides_count }}</td>
                             <td class="px-4 py-3 text-right tabular-nums">{{ p.torcoins_all_time }}</td>
@@ -91,7 +125,7 @@ function confirmMerge(duplicate) {
                             </td>
                         </tr>
                         <tr v-if="mergingId === p.id" class="bg-slate-900/70">
-                            <td colspan="7" class="px-4 py-3">
+                            <td colspan="8" class="px-4 py-3">
                                 <div class="flex flex-wrap items-center gap-2 text-sm">
                                     <span class="text-slate-400">Перенести заїзди «{{ p.display_name }}» в учасника:</span>
                                     <select
