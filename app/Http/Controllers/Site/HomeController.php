@@ -32,13 +32,9 @@ class HomeController extends Controller
         $weekRows = $leaderboard->forPeriod($period);
         $allTimeRows = $leaderboard->allTime();
 
-        $yearTotal = (float) RideResult::whereIn(
-            'weekly_period_id',
-            WeeklyPeriod::where('year', $period->year)->pluck('id')
-        )->sum('distance_km');
-
         $activeParticipants = $weekRows->count();
         $weekTorcoins = $weekRows->sum(fn (array $row) => TorcoinCalculator::fromDistance($row['distance_km']));
+        $weekRidesCount = RideResult::where('weekly_period_id', $period->id)->count();
 
         // Last 12 weeks of club-wide distance for the weekly chart (always the
         // latest weeks, regardless of which week is being viewed).
@@ -89,7 +85,7 @@ class HomeController extends Controller
             'next' => $next ? ['year' => $next->year, 'week_number' => $next->week_number] : null,
             'weekTotalDistance' => (float) RideResult::where('weekly_period_id', $period->id)->sum('distance_km'),
             'weekTorcoins' => $weekTorcoins,
-            'yearTotalDistance' => $yearTotal,
+            'weekRidesCount' => $weekRidesCount,
             'activeParticipants' => $activeParticipants,
             'leader' => $weekRows->isNotEmpty() ? $mapRanking($weekRows->first()) : null,
             'weekRankings' => $weekRows->map($mapRanking),

@@ -43,6 +43,29 @@ class SitePagesTest extends TestCase
         $this->get('/sitemap.xml')->assertOk()->assertHeader('Content-Type', 'application/xml; charset=UTF-8');
     }
 
+    public function test_legacy_statistics_url_redirects_to_stat(): void
+    {
+        $this->get('/statistics')->assertRedirect('/stat');
+    }
+
+    public function test_unknown_route_renders_branded_404(): void
+    {
+        config(['app.debug' => false]);
+
+        $this->get('/this-page-does-not-exist')
+            ->assertNotFound()
+            ->assertInertia(fn (Assert $page) => $page->component('Error')->where('status', 404));
+    }
+
+    public function test_unknown_participant_slug_renders_branded_404(): void
+    {
+        config(['app.debug' => false]);
+
+        $this->get('/stat/user/does-not-exist')
+            ->assertNotFound()
+            ->assertInertia(fn (Assert $page) => $page->component('Error')->where('status', 404));
+    }
+
     public function test_stat_home_page_renders(): void
     {
         $this->seedOneResult();

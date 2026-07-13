@@ -163,44 +163,44 @@ const steps = [
         </header>
 
         <!-- Hero -->
-        <section class="relative isolate flex min-h-screen items-center overflow-hidden">
+        <section class="relative isolate flex min-h-[100svh] items-center overflow-hidden">
             <div
                 class="absolute inset-0 -z-20 bg-cover bg-center"
                 style="background-image: url('/images/hero-bg.jpg')"
             ></div>
             <div class="absolute inset-0 -z-10 bg-gradient-to-br from-brand-950/90 via-brand-800/80 to-brand-600/70"></div>
 
-            <div class="mx-auto w-full max-w-7xl px-4 pb-24 pt-40 sm:px-6 sm:pt-48 lg:px-8">
-                <div data-reveal class="max-w-4xl rounded-[2rem] border border-white/10 bg-brand-950/15 p-5 backdrop-blur-[2px] sm:p-8 lg:p-10">
-                    <p data-reveal-item class="inline-flex px-0 py-2 text-xs font-bold uppercase tracking-[0.3em] text-brand-100">Привіт, велосипедисте</p>
-                    <h1 class="mt-5 text-3xl font-extrabold leading-tight tracking-tight text-white sm:text-4xl lg:text-6xl">
+            <div class="mx-auto w-full max-w-7xl px-4 pb-8 pt-[104px] sm:px-6 sm:pb-24 sm:pt-48 lg:px-8">
+                <div data-reveal class="max-w-4xl rounded-[2rem] border border-white/10 bg-brand-950/15 p-4 backdrop-blur-[2px] sm:p-8 lg:p-10">
+                    <p data-reveal-item class="inline-flex px-0 py-1 text-[11px] font-bold uppercase tracking-[0.3em] text-brand-100 sm:py-2 sm:text-xs">Привіт, велосипедисте</p>
+                    <h1 class="mt-2 text-2xl font-extrabold leading-tight tracking-tight text-white sm:mt-5 sm:text-4xl lg:text-6xl">
                         Приєднуйся до Велоклубу
                         <span class="text-gold-400">«ВелоТОР»</span>
                         у Telegram
                     </h1>
 
-                    <p class="mt-6 max-w-2xl text-base leading-relaxed text-brand-50 sm:text-lg">
+                    <p class="mt-3 max-w-2xl text-sm leading-relaxed text-brand-50 sm:mt-6 sm:text-lg">
                         Спільнота, у якій кожен кілометр стає частиною великої клубної історії.
                     </p>
-                    <ul class="mt-6 grid gap-2 sm:grid-cols-2">
+                    <ul class="mt-3 grid gap-1.5 sm:mt-6 sm:gap-2 sm:grid-cols-2">
                         <li
                             v-for="(b, i) in benefits"
                             :key="i"
                             data-reveal-item
-                            class="flex items-start gap-3 px-0 py-1.5 text-sm text-brand-50 sm:text-base"
+                            class="flex items-start gap-2.5 px-0 py-0.5 text-[13px] leading-snug text-brand-50 sm:gap-3 sm:py-1.5 sm:text-base"
                             :style="{ transitionDelay: `${80 + i * 55}ms` }"
                         >
-                            <span class="mt-2.5 h-px w-6 shrink-0 bg-gold-400"></span>
+                            <span class="mt-2 h-px w-5 shrink-0 bg-gold-400 sm:mt-2.5 sm:w-6"></span>
                             <span>{{ b }}</span>
                         </li>
                     </ul>
 
-                    <div class="mt-9 flex flex-col gap-3 sm:flex-row">
+                    <div class="mt-5 flex flex-col gap-2.5 sm:mt-9 sm:flex-row sm:gap-3">
                         <a
                             :href="brand.telegram_url"
                             target="_blank"
                             rel="noopener"
-                            class="inline-flex items-center justify-center gap-2 rounded-full bg-white px-6 py-3.5 font-semibold text-brand-700 shadow-lg transition hover:-translate-y-0.5 hover:shadow-xl"
+                            class="inline-flex items-center justify-center gap-2 rounded-full bg-white px-6 py-3 font-semibold text-brand-700 shadow-lg transition hover:-translate-y-0.5 hover:shadow-xl sm:py-3.5"
                         >
                             <svg class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor"><path d="M21.94 4.6 18.9 19c-.23 1.02-.84 1.27-1.7.79l-4.7-3.47-2.27 2.18c-.25.25-.46.46-.94.46l.34-4.78 8.7-7.86c.38-.34-.08-.53-.59-.19L6.7 13.02l-4.63-1.45c-1-.31-1.02-1 .21-1.48l18.1-6.98c.84-.31 1.57.19 1.3 1.47Z"/></svg>
                             Наша група у Telegram
@@ -209,7 +209,7 @@ const steps = [
                             :href="brand.shop_url"
                             target="_blank"
                             rel="noopener"
-                            class="inline-flex items-center justify-center gap-2 rounded-full px-6 py-3.5 font-semibold text-white transition hover:-translate-y-0.5 hover:text-gold-300"
+                            class="inline-flex items-center justify-center gap-2 rounded-full px-6 py-3 font-semibold text-white transition hover:-translate-y-0.5 hover:text-gold-300 sm:py-3.5"
                         >
                             <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="5.5" cy="17.5" r="3.5"/><circle cx="18.5" cy="17.5" r="3.5"/><path d="M5.5 17.5h6l3-9h4M9 8.5h4"/></svg>
                             Наш магазин велотоварів
@@ -290,9 +290,9 @@ const steps = [
                             За кожні повні 100&nbsp;км ти отримуєш 1&nbsp;Torcoin. Накопичуй внутрішню
                             валюту клубу та обмінюй на приємні бонуси.
                         </p>
-                        <Link href="/stat/all-time" class="mt-6 inline-flex items-center gap-2 rounded-full bg-white px-5 py-3 font-semibold text-brand-700 shadow-lg transition hover:-translate-y-0.5">
-                            Переглянути рейтинг
-                            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14M13 6l6 6-6 6"/></svg>
+                        <Link href="/stat" class="mt-6 inline-flex items-center gap-2 rounded-full bg-white px-5 py-3 font-semibold text-brand-700 shadow-lg transition hover:-translate-y-0.5">
+                            <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 19V5m0 14h16M8 15l3-4 3 2 4-6"/></svg>
+                            Наша сторінка статистики
                         </Link>
                     </div>
                     <div data-reveal-item class="hidden justify-center md:flex" style="transition-delay: 120ms">

@@ -8,6 +8,7 @@ use App\Models\RideResult;
 use App\Models\WeeklyPeriod;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class TelegramWebhookTest extends TestCase
@@ -100,9 +101,45 @@ class TelegramWebhookTest extends TestCase
 
         Http::assertSent(function ($request) {
             return str_contains($request->url(), 'sendMessage')
-                && str_contains($request['text'], 'Зараховано: 25')
-                && str_contains($request['text'], 'Torcoins');
+                && str_contains(($request['text'] ?? ''), 'результат — 25')
+                && str_contains(($request['text'] ?? ''), 'Torcoins');
         });
+    }
+
+    public function test_adopts_telegram_profile_photo_when_participant_has_no_avatar(): void
+    {
+        Storage::fake('public');
+        // Reset to a clean factory: the broad api.telegram.org/* stub from
+        // setUp() is registered first and would otherwise shadow the specific
+        // profile-photo stubs below (first matching stub wins).
+        Http::swap(new \Illuminate\Http\Client\Factory);
+        Http::fake([
+            '*getUserProfilePhotos*' => Http::response(['ok' => true, 'result' => [
+                'total_count' => 1,
+                'photos' => [[
+                    ['file_id' => 'small', 'width' => 160, 'height' => 160],
+                    ['file_id' => 'big', 'width' => 640, 'height' => 640],
+                ]],
+            ]], 200),
+            '*getFile*' => Http::response(['ok' => true, 'result' => ['file_path' => 'photos/file_1.jpg']], 200),
+            'api.telegram.org/file/*' => Http::response('BINARY-IMAGE-BYTES', 200),
+            'api.telegram.org/*' => Http::response(['ok' => true, 'result' => ['message_id' => 1]], 200),
+        ]);
+
+        $this->postJson(route('telegram.webhook'), $this->update('результат 12 км'))->assertOk();
+
+        $participant = Participant::first();
+        $this->assertSame("/storage/avatars/{$participant->id}.jpg", $participant->avatar_url);
+        Storage::disk('public')->assertExists("avatars/{$participant->id}.jpg");
+    }
+
+    public function test_keeps_placeholder_when_participant_has_no_telegram_photo(): void
+    {
+        Storage::fake('public');
+        // Default fake (from setUp) returns a payload without a `photos` array.
+        $this->postJson(route('telegram.webhook'), $this->update('результат 12 км'))->assertOk();
+
+        $this->assertNull(Participant::first()->avatar_url);
     }
 
     public function test_rejects_too_large_distance(): void
@@ -110,7 +147,7 @@ class TelegramWebhookTest extends TestCase
         $this->postJson(route('telegram.webhook'), $this->update('результат 5000 км'))->assertOk();
 
         $this->assertSame(0, RideResult::count());
-        Http::assertSent(fn ($request) => str_contains($request['text'], 'Занадто великий результат'));
+        Http::assertSent(fn ($request) => str_contains(($request['text'] ?? ''), 'Занадто великий результат'));
     }
 
     public function test_warns_on_duplicate_submission(): void
@@ -119,21 +156,21 @@ class TelegramWebhookTest extends TestCase
         $this->postJson(route('telegram.webhook'), $this->update('результат 20 км'))->assertOk();
 
         $this->assertSame(1, RideResult::count());
-        Http::assertSent(fn ($request) => str_contains($request['text'], 'Схожий результат'));
+        Http::assertSent(fn ($request) => str_contains(($request['text'] ?? ''), 'Схожий результат'));
     }
 
     public function test_start_command_replies(): void
     {
         $this->postJson(route('telegram.webhook'), $this->update('/start'))->assertOk();
 
-        Http::assertSent(fn ($request) => str_contains($request['text'], 'бот велоклубу'));
+        Http::assertSent(fn ($request) => str_contains(($request['text'] ?? ''), 'бот велоклубу'));
     }
 
     public function test_help_command_replies(): void
     {
         $this->postJson(route('telegram.webhook'), $this->update('/help'))->assertOk();
 
-        Http::assertSent(fn ($request) => str_contains($request['text'], 'Як надіслати результат'));
+        Http::assertSent(fn ($request) => str_contains(($request['text'] ?? ''), 'Як надіслати результат'));
     }
 
     public function test_me_command_replies_with_stats(): void
@@ -141,7 +178,7 @@ class TelegramWebhookTest extends TestCase
         $this->postJson(route('telegram.webhook'), $this->update('результат 30 км'))->assertOk();
         $this->postJson(route('telegram.webhook'), $this->update('/me'))->assertOk();
 
-        Http::assertSent(fn ($request) => str_contains($request['text'], 'Мироненко'));
+        Http::assertSent(fn ($request) => str_contains(($request['text'] ?? ''), 'Мироненко'));
     }
 
     public function test_top_command_replies(): void
@@ -149,28 +186,28 @@ class TelegramWebhookTest extends TestCase
         $this->postJson(route('telegram.webhook'), $this->update('результат 15 км'))->assertOk();
         $this->postJson(route('telegram.webhook'), $this->update('/top'))->assertOk();
 
-        Http::assertSent(fn ($request) => str_contains($request['text'], 'Топ-5'));
+        Http::assertSent(fn ($request) => str_contains(($request['text'] ?? ''), 'Топ-5'));
     }
 
     public function test_week_command_replies(): void
     {
         $this->postJson(route('telegram.webhook'), $this->update('/week'))->assertOk();
 
-        Http::assertSent(fn ($request) => str_contains($request['text'], 'Рейтинг тижня'));
+        Http::assertSent(fn ($request) => str_contains(($request['text'] ?? ''), 'Рейтинг тижня'));
     }
 
     public function test_year_command_replies(): void
     {
         $this->postJson(route('telegram.webhook'), $this->update('/year'))->assertOk();
 
-        Http::assertSent(fn ($request) => str_contains($request['text'], 'Рейтинг'));
+        Http::assertSent(fn ($request) => str_contains(($request['text'] ?? ''), 'Рейтинг'));
     }
 
     public function test_alltime_command_replies(): void
     {
         $this->postJson(route('telegram.webhook'), $this->update('/alltime'))->assertOk();
 
-        Http::assertSent(fn ($request) => str_contains($request['text'], 'весь час'));
+        Http::assertSent(fn ($request) => str_contains(($request['text'] ?? ''), 'весь час'));
     }
 
     public function test_webhook_rejects_request_with_wrong_secret(): void

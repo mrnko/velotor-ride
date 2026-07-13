@@ -37,7 +37,7 @@ function goToYear(event) {
         <div data-reveal class="grid grid-cols-3 gap-3 sm:max-w-lg lg:max-w-none">
             <StatCard label="Дистанція" :value="totalDistance" suffix=" км" />
             <StatCard label="Учасників" :value="participantsCount" />
-            <StatCard label="Torcoins" :value="totalTorcoins" />
+            <StatCard label="Torcoins" :value="totalTorcoins" :decimals="2" />
         </div>
 
         <div data-reveal>

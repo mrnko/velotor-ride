@@ -22,7 +22,7 @@ class BotLogController extends Controller
                 'handler' => $log->handler,
                 'status' => $log->status,
                 'error_message' => $log->error_message,
-                'created_at' => $log->created_at->toDateTimeString(),
+                'created_at' => $log->created_at->format('d.m.Y H:i'),
             ]),
         ]);
     }

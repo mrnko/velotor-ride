@@ -49,8 +49,8 @@ class LeaderboardServiceTest extends TestCase
         $this->assertEquals(105.0, $summary['current_week_distance']);
         $this->assertEquals(105.0, $summary['year_distance']);
         $this->assertEquals(105.0, $summary['all_time_distance']);
-        $this->assertSame(1, $summary['torcoins_year']);
-        $this->assertSame(1, $summary['torcoins_all_time']);
+        $this->assertSame(1.05, $summary['torcoins_year']);
+        $this->assertSame(1.05, $summary['torcoins_all_time']);
         $this->assertSame(1, $summary['rank_week']);
     }
 }

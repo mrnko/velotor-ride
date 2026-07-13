@@ -15,7 +15,7 @@ defineProps({
     next: { type: Object, default: null },
     weekTotalDistance: Number,
     weekTorcoins: Number,
-    yearTotalDistance: Number,
+    weekRidesCount: Number,
     activeParticipants: Number,
     leader: Object,
     weekRankings: { type: Array, default: () => [] },
@@ -63,11 +63,11 @@ function goToWeek(week) {
 
             <div class="relative z-10 grid items-center gap-8 px-12 sm:px-16 lg:grid-cols-[1.35fr_0.65fr] lg:px-20">
                 <div>
-                    <div class="flex flex-col items-start gap-2">
-                        <span class="rounded-full bg-gold-400 px-3 py-1 text-xs font-extrabold text-brand-950">Тиждень №{{ period.week_number }}</span>
-                        <span class="rounded-full bg-white/15 px-3 py-1 text-xs font-bold uppercase tracking-wider backdrop-blur">{{ period.year }} рік</span>
+                    <h1 class="max-w-2xl text-2xl font-extrabold tracking-tight sm:text-3xl lg:text-4xl">Статистика велоклубу «ВелоТОР»</h1>
+                    <div class="mt-5 flex flex-col items-start gap-2">
+                        <span class="rounded-full bg-gold-400 px-3 py-1 text-xs font-extrabold text-brand-950 lg:px-4 lg:py-1.5 lg:text-sm">Тиждень №{{ period.week_number }}</span>
+                        <span class="rounded-full bg-white/15 px-3 py-1 text-xs font-bold uppercase tracking-wider backdrop-blur lg:px-4 lg:py-1.5 lg:text-sm">{{ period.year }} рік</span>
                     </div>
-                    <h1 class="mt-5 max-w-2xl text-2xl font-extrabold tracking-tight sm:text-3xl lg:text-4xl">Статистика велоклубу «ВелоТОР»</h1>
                     <p class="mt-3 text-sm text-brand-100 sm:text-base">
                         {{ formatDate(period.start_date) }} — {{ formatDate(period.end_date) }}
                     </p>
@@ -108,9 +108,9 @@ function goToWeek(week) {
             </div>
             <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
                 <StatCard label="Кілометрів накатано" :value="weekTotalDistance" :decimals="1" suffix=" км" />
-                <StatCard label="Torcoins за тиждень" :value="weekTorcoins" hint="зароблено учасниками" />
+                <StatCard label="Torcoins за тиждень" :value="weekTorcoins" :decimals="2" hint="зароблено учасниками" />
                 <StatCard label="Активних учасників" :value="activeParticipants" :hint="`із ${totalParticipants} у клубі`" />
-                <StatCard label="Кілометрів за рік" :value="yearTotalDistance" :decimals="1" suffix=" км" :hint="String(period.year)" />
+                <StatCard label="Заїздів за тиждень" :value="weekRidesCount" hint="усього надіслано" />
             </div>
         </section>
 
@@ -127,7 +127,7 @@ function goToWeek(week) {
                     </div>
                     <div>
                         <p class="text-xs font-bold uppercase tracking-wider text-slate-400">Torcoins клубу</p>
-                        <p class="mt-2 text-3xl font-extrabold text-brand-950"><CountUp :value="clubStats.total_torcoins" /></p>
+                        <p class="mt-2 text-3xl font-extrabold text-brand-950"><CountUp :value="clubStats.total_torcoins" :decimals="2" /></p>
                     </div>
                     <div>
                         <p class="text-xs font-bold uppercase tracking-wider text-slate-400">Тижнів в історії</p>

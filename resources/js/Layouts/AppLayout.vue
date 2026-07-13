@@ -60,7 +60,7 @@ const nav = [
                     class="flex items-center justify-between transition-all duration-300"
                     :class="scrolled ? 'h-16 sm:h-18' : 'h-20 sm:h-24'"
                 >
-                    <Link href="/" class="flex items-center" title="Велоклуб «ВелоТОР» — головна" aria-label="Велоклуб «ВелоТОР» — головна">
+                    <Link href="/" class="flex items-center" title="Велоклуб «ВелоТОР»" aria-label="Велоклуб «ВелоТОР»">
                         <img
                             src="/images/logo.png"
                             alt="Велоклуб «ВелоТОР»"

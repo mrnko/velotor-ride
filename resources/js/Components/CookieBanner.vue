@@ -50,7 +50,7 @@ function accept() {
                         <Link href="/privacy-policy" class="font-semibold text-brand-600 underline decoration-brand-200 underline-offset-3 hover:text-brand-700">політиці конфіденційності</Link>.
                     </p>
                 </div>
-                <button type="button" class="shrink-0 rounded-xl bg-brand-600 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-brand-600/20 transition hover:-translate-y-0.5 hover:bg-brand-700" @click="accept">
+                <button type="button" class="shrink-0 cursor-pointer rounded-xl bg-brand-600 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-brand-600/20 transition hover:-translate-y-0.5 hover:bg-brand-700" @click="accept">
                     Добре
                 </button>
             </div>

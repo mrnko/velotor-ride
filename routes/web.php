@@ -1,8 +1,10 @@
 <?php
 
 use App\Http\Controllers\Admin\BotLogController;
+use App\Http\Controllers\AnnounceUpdateController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\ParticipantController as AdminParticipantController;
+use App\Http\Controllers\Admin\PasswordController;
 use App\Http\Controllers\Admin\RideResultController;
 use App\Http\Controllers\Admin\SettingController;
 use App\Http\Controllers\Admin\WeeklyPeriodController;
@@ -27,6 +29,9 @@ Route::get('/', LandingController::class)->name('home');
 Route::get('/privacy-policy', PrivacyController::class)->name('privacy');
 Route::get('/sitemap.xml', SitemapController::class)->name('sitemap');
 
+// Legacy URL from the old site — old Telegram messages and bookmarks still link here.
+Route::redirect('/statistics', '/stat', 301);
+
 Route::prefix('stat')->name('stat.')->group(function () {
     Route::get('/', HomeController::class)->name('home');
 
@@ -46,6 +51,8 @@ Route::post('/telegram/webhook', [TelegramWebhookController::class, 'handle'])
     ->middleware('telegram.webhook')
     ->name('telegram.webhook');
 
+Route::get('/telegram/announce', AnnounceUpdateController::class)->name('telegram.announce');
+
 Route::get('/admin/login', [AuthController::class, 'showLogin'])->name('login');
 Route::post('/admin/login', [AuthController::class, 'login'])->name('login.attempt');
 Route::post('/admin/logout', [AuthController::class, 'logout'])->name('logout');
@@ -55,6 +62,7 @@ Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
     Route::post('/recalculate', [DashboardController::class, 'recalculate'])->name('recalculate');
 
     Route::get('/participants', [AdminParticipantController::class, 'index'])->name('participants.index');
+    Route::post('/participants/{participant}/merge', [AdminParticipantController::class, 'merge'])->name('participants.merge');
 
     Route::get('/ride-results', [RideResultController::class, 'index'])->name('ride-results.index');
     Route::get('/ride-results/{rideResult}/edit', [RideResultController::class, 'edit'])->name('ride-results.edit');
@@ -63,9 +71,11 @@ Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
 
     Route::get('/weekly-periods', [WeeklyPeriodController::class, 'index'])->name('weekly-periods.index');
     Route::post('/weekly-periods/close', [WeeklyPeriodController::class, 'close'])->name('weekly-periods.close');
+    Route::post('/weekly-periods/remind', [WeeklyPeriodController::class, 'remind'])->name('weekly-periods.remind');
 
     Route::get('/bot-logs', [BotLogController::class, 'index'])->name('bot-logs.index');
 
     Route::get('/settings', [SettingController::class, 'edit'])->name('settings.edit');
     Route::put('/settings', [SettingController::class, 'update'])->name('settings.update');
+    Route::put('/password', [PasswordController::class, 'update'])->name('password.update');
 });

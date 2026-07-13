@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Participant;
 use App\Models\RideResult;
+use App\Models\Setting;
 use App\Models\User;
 use App\Models\WeeklyPeriod;
 use App\Services\Weeks\WeekResolverService;
@@ -57,6 +58,70 @@ class AdminPanelTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page->component('Admin/Participants/Index')->has('participants', 3));
     }
 
+    public function test_admin_participants_page_flags_possible_duplicates_by_name(): void
+    {
+        $legacy = Participant::factory()->create(['display_name' => 'Alex Kh']);
+        $linked = Participant::factory()->create(['display_name' => 'Alex Khrumalo']);
+        $unrelated = Participant::factory()->create(['display_name' => 'Дмитрий Скоробогатов']);
+
+        $this->actingAs($this->admin())->get('/admin/participants')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Admin/Participants/Index')
+                ->where('participants', function ($participants) use ($legacy, $linked, $unrelated) {
+                    $byId = collect($participants)->keyBy('id');
+
+                    return count($byId[$legacy->id]['possible_duplicates']) === 1
+                        && $byId[$legacy->id]['possible_duplicates'][0]['id'] === $linked->id
+                        && count($byId[$linked->id]['possible_duplicates']) === 1
+                        && $byId[$unrelated->id]['possible_duplicates'] === [];
+                })
+            );
+    }
+
+    public function test_admin_can_merge_a_legacy_duplicate_into_the_telegram_linked_participant(): void
+    {
+        $period = app(WeekResolverService::class)->activePeriod();
+
+        $legacy = Participant::factory()->create([
+            'legacy_source' => 'old_site',
+            'legacy_id' => 42,
+            'telegram_user_id' => 9_000_000_000_000_042,
+            'telegram_username' => null,
+            'display_name' => 'Данил Ілларіонов',
+        ]);
+        $telegramLinked = Participant::factory()->create([
+            'legacy_source' => null,
+            'legacy_id' => null,
+            'telegram_user_id' => 123456789,
+            'telegram_username' => 'danil_i',
+            'display_name' => 'Danil Illarionov',
+        ]);
+
+        RideResult::factory()->create([
+            'participant_id' => $legacy->id,
+            'weekly_period_id' => $period->id,
+            'distance_km' => 90,
+        ]);
+        RideResult::factory()->create([
+            'participant_id' => $telegramLinked->id,
+            'weekly_period_id' => $period->id,
+            'distance_km' => 10,
+        ]);
+
+        $this->actingAs($this->admin())
+            ->post("/admin/participants/{$telegramLinked->id}/merge", ['into_id' => $legacy->id])
+            ->assertRedirect('/admin/participants');
+
+        $this->assertModelMissing($telegramLinked);
+
+        $legacy->refresh();
+        $this->assertSame(123456789, $legacy->telegram_user_id);
+        $this->assertSame('danil_i', $legacy->telegram_username);
+        $this->assertSame(2, RideResult::where('participant_id', $legacy->id)->count());
+        $this->assertEquals(100.0, (float) RideResult::where('participant_id', $legacy->id)->sum('distance_km'));
+    }
+
     public function test_admin_can_edit_a_ride_result_and_totals_recalculate(): void
     {
         $period = app(WeekResolverService::class)->activePeriod();
@@ -104,6 +169,34 @@ class AdminPanelTest extends TestCase
         $this->assertSame(2, WeeklyPeriod::count());
     }
 
+    public function test_admin_can_manually_send_a_week_closing_reminder(): void
+    {
+        Http::fake(['api.telegram.org/*' => Http::response(['ok' => true, 'result' => ['message_id' => 1]], 200)]);
+        Setting::set('telegram_chat_id', '-100999');
+
+        app(WeekResolverService::class)->activePeriod();
+
+        $this->actingAs($this->admin())->post('/admin/weekly-periods/remind')
+            ->assertRedirect()
+            ->assertSessionHas('success');
+
+        Http::assertSent(fn ($request) => str_contains($request->url(), 'sendMessage')
+            && str_contains($request['text'], 'До закриття тижня'));
+    }
+
+    public function test_admin_weekly_periods_page_shows_time_remaining_for_active_period(): void
+    {
+        $active = app(WeekResolverService::class)->activePeriod();
+
+        $this->actingAs($this->admin())->get('/admin/weekly-periods')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Admin/WeeklyPeriods/Index')
+                ->where('activePeriod.week_number', $active->week_number)
+                ->has('activePeriod.time_remaining')
+            );
+    }
+
     public function test_admin_can_update_settings(): void
     {
         $this->actingAs($this->admin())->put('/admin/settings', [
@@ -123,5 +216,31 @@ class AdminPanelTest extends TestCase
         $this->actingAs($this->admin())->get('/admin/bot-logs')
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page->component('Admin/BotLogs/Index'));
+    }
+
+    public function test_admin_can_change_own_password(): void
+    {
+        $admin = $this->admin();
+
+        $this->actingAs($admin)->put('/admin/password', [
+            'current_password' => 'password',
+            'password' => 'new-secret-password',
+            'password_confirmation' => 'new-secret-password',
+        ])->assertRedirect();
+
+        $this->assertTrue(\Illuminate\Support\Facades\Hash::check('new-secret-password', $admin->fresh()->password));
+    }
+
+    public function test_admin_cannot_change_password_with_wrong_current_password(): void
+    {
+        $admin = $this->admin();
+
+        $this->actingAs($admin)->put('/admin/password', [
+            'current_password' => 'wrong',
+            'password' => 'new-secret-password',
+            'password_confirmation' => 'new-secret-password',
+        ])->assertSessionHasErrors('current_password');
+
+        $this->assertTrue(\Illuminate\Support\Facades\Hash::check('password', $admin->fresh()->password));
     }
 }

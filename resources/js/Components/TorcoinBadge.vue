@@ -1,8 +1,12 @@
 <script setup>
-defineProps({
+const props = defineProps({
     value: { type: Number, required: true },
     size: { type: String, default: 'md' }, // sm | md
 });
+
+function formatted() {
+    return new Intl.NumberFormat('uk-UA', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(props.value ?? 0);
+}
 </script>
 
 <template>
@@ -11,6 +15,6 @@ defineProps({
         :class="size === 'sm' ? 'px-2 py-0.5 text-xs' : 'px-2.5 py-1 text-sm'"
     >
         <span aria-hidden="true">🪙</span>
-        {{ value }}
+        {{ formatted() }}
     </span>
 </template>

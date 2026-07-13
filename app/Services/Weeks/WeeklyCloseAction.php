@@ -8,6 +8,7 @@ use App\Models\RideResult;
 use App\Models\Setting;
 use App\Models\WeeklyPeriod;
 use App\Services\Telegram\TelegramClient;
+use App\Services\Torcoins\TorcoinCalculator;
 use Illuminate\Support\Facades\DB;
 
 class WeeklyCloseAction
@@ -105,24 +106,29 @@ class WeeklyCloseAction
             ->count('participant_id');
 
         $lines = [];
-        $lines[] = "🚴 Підсумки тижня {$period->week_number} / {$period->year}";
+        $lines[] = "🚴 -= ТИЖДЕНЬ {$period->week_number} | {$period->year} =- закінчився!";
         $lines[] = '';
-        $lines[] = 'Загальна дистанція: '.number_format($totalDistance, 0, '.', ' ').' км';
-        $lines[] = "Учасників: {$participantsCount}";
+        $lines[] = 'Дякуємо всім за участь! Ви найкращі! 🙌';
+        $lines[] = '';
+        $lines[] = 'Загальна дистанція клубу за тиждень: '.number_format($totalDistance, 0, '.', ' ').' км';
+        $lines[] = "Учасників цього тижня: {$participantsCount}";
         $lines[] = '';
 
         if ($top5->isNotEmpty()) {
-            $lines[] = '🏆 Топ-5:';
+            $lines[] = '🏆 ТОП-5 найактивніших учасників тижня:';
             $lines[] = '';
             foreach ($top5->values() as $index => $row) {
                 $name = $row['participant']?->display_name ?? 'Учасник';
                 $km = number_format($row['distance'], 0, '.', ' ');
-                $lines[] = ($index + 1).". {$name} — {$km} км";
+                $coins = number_format(TorcoinCalculator::fromDistance($row['distance']), 2, '.', ' ');
+                $lines[] = ($index + 1).". {$name}, з результатом — {$km} км ({$coins} Torcoins)";
             }
             $lines[] = '';
         }
 
-        $lines[] = '🔥 Дякуємо всім за активність! Новий тиждень вже стартував.';
+        $lines[] = '🚀 Новий тиждень вже стартував — не забувай надсилати свій кілометраж!';
+        $lines[] = '';
+        $lines[] = '➡️ Повна статистика — '.route('stat.home').' ⬅️';
 
         return implode("\n", $lines);
     }

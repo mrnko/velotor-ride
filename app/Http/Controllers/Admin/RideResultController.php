@@ -24,7 +24,7 @@ class RideResultController extends Controller
                 'distance_km' => (float) $r->distance_km,
                 'source' => $r->source,
                 'raw_message' => $r->raw_message,
-                'created_at' => $r->created_at->toDateTimeString(),
+                'created_at' => $r->created_at->format('d.m.Y H:i'),
             ]);
 
         return Inertia::render('Admin/RideResults/Index', [
@@ -42,7 +42,7 @@ class RideResultController extends Controller
                 'participant_name' => $rideResult->participant?->display_name,
                 'distance_km' => (float) $rideResult->distance_km,
                 'raw_message' => $rideResult->raw_message,
-                'created_at' => $rideResult->created_at->toDateTimeString(),
+                'created_at' => $rideResult->created_at->format('d.m.Y H:i'),
             ],
         ]);
     }

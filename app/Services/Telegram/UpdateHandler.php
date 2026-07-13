@@ -11,6 +11,7 @@ use App\Services\Stats\DuplicateGuard;
 use App\Services\Torcoins\TorcoinCalculator;
 use App\Services\Weeks\WeekResolverService;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 use Throwable;
 
 class UpdateHandler
@@ -170,20 +171,55 @@ class UpdateHandler
             'source' => 'telegram',
         ]);
 
+        $this->syncAvatar($participant);
+
         $weekTotal = (float) RideResult::where('participant_id', $participant->id)
             ->where('weekly_period_id', $period->id)
             ->sum('distance_km');
 
         $allTimeTotal = (float) RideResult::where('participant_id', $participant->id)->sum('distance_km');
+        $torcoins = TorcoinCalculator::fromDistance($allTimeTotal);
+        $kmToNext = TorcoinCalculator::kmToNextCoin($allTimeTotal);
+        $statUrl = route('stat.home');
 
         $reply = implode("\n", [
-            '✅ Зараховано: '.number_format($parsed->distanceKm, 2, '.', ' ').' км',
-            'За цей тиждень: '.number_format($weekTotal, 2, '.', ' ').' км',
-            'Усього: '.number_format($allTimeTotal, 2, '.', ' ').' км',
-            'Torcoins: '.TorcoinCalculator::fromDistance($allTimeTotal),
+            "{$participant->display_name}, супер! ✌️",
+            '',
+            '✅ Твій результат — '.number_format($parsed->distanceKm, 2, '.', ' ').' км успішно зараховано у загальному заліку!',
+            '',
+            "-= ТИЖДЕНЬ {$period->week_number} | {$period->year} рік =-",
+            '',
+            '🚴 За цей тиждень: '.number_format($weekTotal, 2, '.', ' ').' км',
+            '🌍 Усього за весь час: '.number_format($allTimeTotal, 2, '.', ' ').' км',
+            '💰 Баланс Torcoins: '.number_format($torcoins, 2, '.', ' ')." (ще {$kmToNext} км до наступного)",
+            '',
+            "➡️ Статистика за тиждень — {$statUrl} ⬅️",
         ]);
 
         $this->telegram->sendMessage($chatId, $reply);
         $log->update(['status' => 'ok', 'handler' => 'result_saved']);
+    }
+
+    /**
+     * When a participant who has no avatar yet submits a result, try to adopt
+     * their current Telegram profile photo. If they have none (or it's hidden),
+     * nothing changes and the UI keeps showing the initials placeholder.
+     */
+    private function syncAvatar(Participant $participant): void
+    {
+        if (filled($participant->avatar_url)) {
+            return;
+        }
+
+        $bytes = $this->telegram->fetchUserProfilePhoto($participant->telegram_user_id);
+
+        if ($bytes === null) {
+            return;
+        }
+
+        $path = "avatars/{$participant->id}.jpg";
+        Storage::disk('public')->put($path, $bytes);
+
+        $participant->forceFill(['avatar_url' => '/storage/'.$path])->save();
     }
 }

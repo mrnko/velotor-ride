@@ -13,6 +13,19 @@ const form = useForm({ ...props.settings });
 function submit() {
     form.put('/admin/settings');
 }
+
+const passwordForm = useForm({
+    current_password: '',
+    password: '',
+    password_confirmation: '',
+});
+
+function submitPassword() {
+    passwordForm.put('/admin/password', {
+        preserveScroll: true,
+        onSuccess: () => passwordForm.reset(),
+    });
+}
 </script>
 
 <template>
@@ -56,9 +69,38 @@ function submit() {
             <button
                 type="submit"
                 :disabled="form.processing"
-                class="rounded-lg bg-amber-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-amber-400 disabled:opacity-60"
+                class="cursor-pointer rounded-lg bg-amber-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-amber-400 disabled:opacity-60"
             >
                 Зберегти
+            </button>
+        </form>
+
+        <form class="space-y-4 rounded-2xl border border-slate-800 bg-slate-900/60 p-5" @submit.prevent="submitPassword">
+            <h2 class="text-lg font-bold text-white">Зміна пароля</h2>
+
+            <div>
+                <label class="mb-1 block text-sm font-medium text-slate-300">Поточний пароль</label>
+                <input v-model="passwordForm.current_password" type="password" autocomplete="current-password" class="w-full rounded-lg border border-slate-800 bg-slate-950 px-3 py-2 text-sm focus:border-amber-400 focus:outline-none focus:ring-1 focus:ring-amber-400" />
+                <p v-if="passwordForm.errors.current_password" class="mt-1 text-xs text-rose-400">{{ passwordForm.errors.current_password }}</p>
+            </div>
+
+            <div>
+                <label class="mb-1 block text-sm font-medium text-slate-300">Новий пароль</label>
+                <input v-model="passwordForm.password" type="password" autocomplete="new-password" class="w-full rounded-lg border border-slate-800 bg-slate-950 px-3 py-2 text-sm focus:border-amber-400 focus:outline-none focus:ring-1 focus:ring-amber-400" />
+                <p v-if="passwordForm.errors.password" class="mt-1 text-xs text-rose-400">{{ passwordForm.errors.password }}</p>
+            </div>
+
+            <div>
+                <label class="mb-1 block text-sm font-medium text-slate-300">Підтвердження нового пароля</label>
+                <input v-model="passwordForm.password_confirmation" type="password" autocomplete="new-password" class="w-full rounded-lg border border-slate-800 bg-slate-950 px-3 py-2 text-sm focus:border-amber-400 focus:outline-none focus:ring-1 focus:ring-amber-400" />
+            </div>
+
+            <button
+                type="submit"
+                :disabled="passwordForm.processing"
+                class="cursor-pointer rounded-lg bg-amber-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-amber-400 disabled:opacity-60"
+            >
+                Змінити пароль
             </button>
         </form>
     </div>

@@ -28,8 +28,8 @@ class MeCommand implements TelegramCommand
             'За рік: '.number_format($s['year_distance'], 2, '.', ' ')." км (місце {$rankYear})",
             'Усього: '.number_format($s['all_time_distance'], 2, '.', ' ').' км',
             '',
-            "Torcoins за рік: {$s['torcoins_year']}",
-            "Torcoins за весь час: {$s['torcoins_all_time']}",
+            'Torcoins за рік: '.number_format($s['torcoins_year'], 2, '.', ' '),
+            'Torcoins за весь час: '.number_format($s['torcoins_all_time'], 2, '.', ' '),
         ]);
     }
 }
