@@ -15,3 +15,12 @@ createInertiaApp({
             .mount(el);
     },
 });
+
+// PWA: register the service worker so the site is installable and works offline.
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js').catch(() => {
+            // Registration failures are non-fatal — the site works without the SW.
+        });
+    });
+}

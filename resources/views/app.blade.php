@@ -58,10 +58,14 @@
         <link rel="icon" type="image/png" sizes="32x32" href="/images/favicons/favicon-32x32.png">
         <link rel="icon" type="image/png" sizes="96x96" href="/images/favicons/favicon-96x96.png">
         <link rel="icon" type="image/png" sizes="192x192" href="/images/favicons/android-icon-192x192.png">
-        <link rel="apple-touch-icon" sizes="120x120" href="/images/favicons/apple-icon-120x120.png">
-        <link rel="apple-touch-icon" sizes="152x152" href="/images/favicons/apple-icon-152x152.png">
-        <link rel="apple-touch-icon" sizes="180x180" href="/images/favicons/apple-icon-180x180.png">
+        <link rel="apple-touch-icon" href="/images/pwa/apple-touch-icon.png">
+        <link rel="apple-touch-icon" sizes="180x180" href="/images/pwa/apple-touch-icon.png">
         <link rel="manifest" href="/site.webmanifest">
+
+        {{-- PWA / installable app --}}
+        <meta name="mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
         <meta name="apple-mobile-web-app-title" content="{{ $brand['name'] }}">
 
         <link rel="preconnect" href="https://fonts.bunny.net">
