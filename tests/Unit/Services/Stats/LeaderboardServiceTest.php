@@ -4,6 +4,7 @@ namespace Tests\Unit\Services\Stats;
 
 use App\Models\Participant;
 use App\Models\RideResult;
+use App\Models\TorcoinBonus;
 use App\Models\WeeklyPeriod;
 use App\Services\Stats\LeaderboardService;
 use App\Services\Weeks\WeekResolverService;
@@ -24,7 +25,7 @@ class LeaderboardServiceTest extends TestCase
         RideResult::factory()->create(['participant_id' => $bob->id, 'weekly_period_id' => $period->id, 'distance_km' => 50]);
         RideResult::factory()->create(['participant_id' => $alice->id, 'weekly_period_id' => $period->id, 'distance_km' => 40]);
 
-        $leaderboard = (new LeaderboardService())->forPeriod($period);
+        $leaderboard = (new LeaderboardService)->forPeriod($period);
 
         $this->assertSame(2, $leaderboard->count());
         $this->assertSame('Alice', $leaderboard[0]['participant']->display_name);
@@ -43,14 +44,20 @@ class LeaderboardServiceTest extends TestCase
         $participant = Participant::factory()->create();
         RideResult::factory()->create(['participant_id' => $participant->id, 'weekly_period_id' => $active->id, 'distance_km' => 60]);
         RideResult::factory()->create(['participant_id' => $participant->id, 'weekly_period_id' => $active->id, 'distance_km' => 45]);
+        TorcoinBonus::create([
+            'participant_id' => $participant->id,
+            'weekly_period_id' => $active->id,
+            'amount' => 0.1,
+            'reason' => TorcoinBonus::REASON_FIRST_WEEKLY_RESULT,
+        ]);
 
-        $summary = (new LeaderboardService())->participantSummary($participant, $resolver);
+        $summary = (new LeaderboardService)->participantSummary($participant, $resolver);
 
         $this->assertEquals(105.0, $summary['current_week_distance']);
         $this->assertEquals(105.0, $summary['year_distance']);
         $this->assertEquals(105.0, $summary['all_time_distance']);
-        $this->assertSame(1.05, $summary['torcoins_year']);
-        $this->assertSame(1.05, $summary['torcoins_all_time']);
+        $this->assertSame(1.15, $summary['torcoins_year']);
+        $this->assertSame(1.15, $summary['torcoins_all_time']);
         $this->assertSame(1, $summary['rank_week']);
     }
 }

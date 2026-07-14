@@ -9,6 +9,7 @@ use App\Models\Setting;
 use App\Models\WeeklyPeriod;
 use App\Services\Telegram\TelegramClient;
 use App\Services\Torcoins\TorcoinCalculator;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 class WeeklyCloseAction
@@ -82,9 +83,9 @@ class WeeklyCloseAction
     }
 
     /**
-     * @return \Illuminate\Support\Collection<int, array{participant: Participant, distance: float}>
+     * @return Collection<int, array{participant: Participant, distance: float}>
      */
-    private function topParticipants(WeeklyPeriod $period, int $limit): \Illuminate\Support\Collection
+    private function topParticipants(WeeklyPeriod $period, int $limit): Collection
     {
         return RideResult::query()
             ->selectRaw('participant_id, SUM(distance_km) as total_distance')
@@ -99,11 +100,12 @@ class WeeklyCloseAction
             ]);
     }
 
-    private function buildReportText(WeeklyPeriod $period, float $totalDistance, \Illuminate\Support\Collection $top5): string
+    private function buildReportText(WeeklyPeriod $period, float $totalDistance, Collection $top5): string
     {
         $participantsCount = RideResult::where('weekly_period_id', $period->id)
             ->distinct('participant_id')
             ->count('participant_id');
+        $bonuses = TorcoinCalculator::bonusesByParticipant([$period->id]);
 
         $lines = [];
         $lines[] = "🚴 -= ТИЖДЕНЬ {$period->week_number} | {$period->year} =- закінчився!";
@@ -120,7 +122,12 @@ class WeeklyCloseAction
             foreach ($top5->values() as $index => $row) {
                 $name = $row['participant']?->display_name ?? 'Учасник';
                 $km = number_format($row['distance'], 0, '.', ' ');
-                $coins = number_format(TorcoinCalculator::fromDistance($row['distance']), 2, '.', ' ');
+                $coins = number_format(
+                    TorcoinCalculator::fromDistance($row['distance']) + $bonuses->get($row['participant']?->id, 0),
+                    2,
+                    '.',
+                    ' '
+                );
                 $lines[] = ($index + 1).". {$name}, з результатом — {$km} км ({$coins} Torcoins)";
             }
             $lines[] = '';

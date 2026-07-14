@@ -22,12 +22,13 @@ class AllTimeController extends Controller
             ->keyBy('participant_id');
 
         $totalDistance = (float) RideResult::sum('distance_km');
+        $bonuses = TorcoinCalculator::bonusesByParticipant();
 
         return Inertia::render('AllTime/Index', [
             'totalDistance' => $totalDistance,
-            'totalTorcoins' => TorcoinCalculator::fromDistance($totalDistance),
+            'totalTorcoins' => round(TorcoinCalculator::fromDistance($totalDistance) + $bonuses->sum(), 2),
             'participantsCount' => $rows->count(),
-            'rankings' => $rows->map(function (array $row) use ($activity) {
+            'rankings' => $rows->map(function (array $row) use ($activity, $bonuses) {
                 $extra = $activity->get($row['participant']->id);
 
                 return [
@@ -40,7 +41,7 @@ class AllTimeController extends Controller
                     'distance_km' => $row['distance_km'],
                     'rides_count' => $row['rides_count'],
                     'weeks_active' => $extra ? (int) $extra->weeks_active : 0,
-                    'torcoins' => TorcoinCalculator::fromDistance($row['distance_km']),
+                    'torcoins' => round(TorcoinCalculator::fromDistance($row['distance_km']) + $bonuses->get($row['participant']->id, 0), 2),
                     'last_activity' => $extra?->last_activity,
                 ];
             }),

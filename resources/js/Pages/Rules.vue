@@ -45,8 +45,11 @@ const props = defineProps({
         <section class="surface-card rounded-2xl p-5">
             <h2 class="text-lg font-bold text-brand-950">🪙 Як рахуються Torcoins</h2>
             <p class="mt-2 text-sm text-slate-500">
-                1 Torcoin за кожні {{ torcoinKmPerCoin }} км (округлення вниз). Наприклад, 99 км —
-                0 Torcoins, 100 км — 1 Torcoin, 250 км — 2 Torcoins.
+                1 Torcoin за кожні {{ torcoinKmPerCoin }} км. Наприклад, 10 км — 0.1 Torcoin,
+                100 км — 1 Torcoin, 250 км — 2.5 Torcoins.
+            </p>
+            <p class="mt-2 text-sm text-slate-500">
+                Перший учасник, який надішле результат нового тижня, додатково отримує 0.1 Torcoin.
             </p>
         </section>
 

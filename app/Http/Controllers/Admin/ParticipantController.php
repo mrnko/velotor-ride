@@ -5,12 +5,13 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Participant;
 use App\Models\RideResult;
+use App\Models\TorcoinBonus;
 use App\Services\Torcoins\TorcoinCalculator;
 use App\Support\Transliterate;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -26,9 +27,10 @@ class ParticipantController extends Controller
             ->keyBy('participant_id');
 
         $possibleDuplicates = $this->findPossibleDuplicates($participants);
+        $bonuses = TorcoinCalculator::bonusesByParticipant();
 
         return Inertia::render('Admin/Participants/Index', [
-            'participants' => $participants->map(function (Participant $participant) use ($totals, $possibleDuplicates) {
+            'participants' => $participants->map(function (Participant $participant) use ($totals, $possibleDuplicates, $bonuses) {
                 $total = $totals->get($participant->id);
                 $distance = $total ? (float) $total->total_distance : 0.0;
 
@@ -46,7 +48,7 @@ class ParticipantController extends Controller
                     'last_seen_at' => $participant->last_seen_at?->format('d.m.Y'),
                     'total_distance' => $distance,
                     'rides_count' => $total ? (int) $total->rides_count : 0,
-                    'torcoins_all_time' => TorcoinCalculator::fromDistance($distance),
+                    'torcoins_all_time' => round(TorcoinCalculator::fromDistance($distance) + $bonuses->get($participant->id, 0), 2),
                     'possible_duplicates' => $possibleDuplicates->get($participant->id, []),
                 ];
             }),
@@ -152,6 +154,7 @@ class ParticipantController extends Controller
 
         DB::transaction(function () use ($primary, $duplicate) {
             RideResult::where('participant_id', $duplicate->id)->update(['participant_id' => $primary->id]);
+            TorcoinBonus::where('participant_id', $duplicate->id)->update(['participant_id' => $primary->id]);
 
             $transferTelegramIdentity = $duplicate->legacy_source === null && $primary->legacy_source !== null;
 

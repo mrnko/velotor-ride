@@ -45,6 +45,8 @@ return [
 
     'torcoin_km_per_coin' => 100,
 
+    'weekly_first_result_bonus' => 0.1,
+
     /*
     |--------------------------------------------------------------------------
     | Result submission validation defaults

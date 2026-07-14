@@ -80,8 +80,8 @@ class LeaderboardService
             'last_week_distance' => $lastWeekDistance,
             'year_distance' => $yearDistance,
             'all_time_distance' => $allTimeDistance,
-            'torcoins_year' => TorcoinCalculator::fromDistance($yearDistance),
-            'torcoins_all_time' => TorcoinCalculator::fromDistance($allTimeDistance),
+            'torcoins_year' => TorcoinCalculator::balanceForParticipant($participant, $yearDistance, $yearPeriodIds),
+            'torcoins_all_time' => TorcoinCalculator::balanceForParticipant($participant, $allTimeDistance),
             'rank_week' => $this->rankOf($weekLeaderboard, $participant->id),
             'rank_year' => $this->rankOf($yearLeaderboard, $participant->id),
         ];

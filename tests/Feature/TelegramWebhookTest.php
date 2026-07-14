@@ -5,8 +5,9 @@ namespace Tests\Feature;
 use App\Models\BotMessageLog;
 use App\Models\Participant;
 use App\Models\RideResult;
-use App\Models\WeeklyPeriod;
+use App\Models\TorcoinBonus;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Client\Factory;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
@@ -106,13 +107,73 @@ class TelegramWebhookTest extends TestCase
         });
     }
 
+    public function test_first_result_of_week_earns_bonus_and_announces_updated_balance(): void
+    {
+        $this->postJson(route('telegram.webhook'), $this->update('результат 25 км'))->assertOk();
+
+        $bonus = TorcoinBonus::first();
+        $this->assertNotNull($bonus);
+        $this->assertSame(0.1, (float) $bonus->amount);
+        $this->assertSame(Participant::first()->id, $bonus->participant_id);
+        $this->assertSame(RideResult::first()->weekly_period_id, $bonus->weekly_period_id);
+
+        Http::assertSent(fn ($request) => str_contains(($request['text'] ?? ''), 'першим учасником')
+            && str_contains(($request['text'] ?? ''), '<b>Олексій Мироненко</b>')
+            && str_contains(($request['text'] ?? ''), '<b>0.1 TOR.COINS</b>')
+            && str_contains(($request['text'] ?? ''), 'Ваш баланс TOR.COINS: <b>0.35</b>'));
+    }
+
+    public function test_only_one_participant_receives_the_weekly_first_result_bonus(): void
+    {
+        $this->postJson(route('telegram.webhook'), $this->update('результат 25 км'))->assertOk();
+
+        $secondParticipant = [
+            'id' => 777222,
+            'is_bot' => false,
+            'first_name' => 'Інший',
+            'last_name' => 'Учасник',
+            'username' => 'another',
+        ];
+        $this->postJson(route('telegram.webhook'), $this->update('результат 30 км', [
+            'from' => $secondParticipant,
+        ]))->assertOk();
+
+        $this->assertSame(2, RideResult::count());
+        $this->assertSame(1, TorcoinBonus::count());
+        $this->assertSame(555111, TorcoinBonus::first()->participant->telegram_user_id);
+
+        $announcements = Http::recorded(fn ($request) => str_contains(($request['text'] ?? ''), 'першим учасником'));
+        $this->assertCount(1, $announcements);
+    }
+
+    public function test_deleting_the_first_ride_does_not_award_the_same_weekly_bonus_again(): void
+    {
+        $this->postJson(route('telegram.webhook'), $this->update('результат 25 км'))->assertOk();
+        RideResult::query()->delete();
+
+        $this->postJson(route('telegram.webhook'), $this->update('результат 30 км', [
+            'from' => [
+                'id' => 777222,
+                'is_bot' => false,
+                'first_name' => 'Інший',
+                'last_name' => 'Учасник',
+                'username' => 'another',
+            ],
+        ]))->assertOk();
+
+        $this->assertSame(1, RideResult::count());
+        $this->assertSame(1, TorcoinBonus::count());
+        $this->assertSame(555111, TorcoinBonus::first()->participant->telegram_user_id);
+        $this->assertSame('result_saved', BotMessageLog::latest('id')->first()->handler);
+    }
+
     public function test_adopts_telegram_profile_photo_when_participant_has_no_avatar(): void
     {
         Storage::fake('public');
         // Reset to a clean factory: the broad api.telegram.org/* stub from
         // setUp() is registered first and would otherwise shadow the specific
         // profile-photo stubs below (first matching stub wins).
-        Http::swap(new \Illuminate\Http\Client\Factory);
+        Http::swap(new Factory);
         Http::fake([
             '*getUserProfilePhotos*' => Http::response(['ok' => true, 'result' => [
                 'total_count' => 1,

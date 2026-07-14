@@ -31,9 +31,14 @@ class HomeController extends Controller
     {
         $weekRows = $leaderboard->forPeriod($period);
         $allTimeRows = $leaderboard->allTime();
+        $weekBonuses = TorcoinCalculator::bonusesByParticipant([$period->id]);
+        $allTimeBonuses = TorcoinCalculator::bonusesByParticipant();
 
         $activeParticipants = $weekRows->count();
-        $weekTorcoins = $weekRows->sum(fn (array $row) => TorcoinCalculator::fromDistance($row['distance_km']));
+        $weekTorcoins = $weekRows->sum(fn (array $row) => round(
+            TorcoinCalculator::fromDistance($row['distance_km']) + $weekBonuses->get($row['participant']->id, 0),
+            2
+        ));
         $weekRidesCount = RideResult::where('weekly_period_id', $period->id)->count();
 
         // Last 12 weeks of club-wide distance for the weekly chart (always the
@@ -55,7 +60,7 @@ class HomeController extends Controller
             'active_participants' => (int) ($recentActive[$p->id] ?? 0),
         ]);
 
-        $mapRanking = fn (array $row) => [
+        $mapRanking = fn (array $row, $bonuses) => [
             'rank' => $row['rank'],
             'name' => $row['participant']->display_name,
             'participant_id' => $row['participant']->id,
@@ -64,12 +69,15 @@ class HomeController extends Controller
             'initials' => $row['participant']->initials(),
             'distance_km' => $row['distance_km'],
             'rides_count' => $row['rides_count'],
-            'torcoins' => TorcoinCalculator::fromDistance($row['distance_km']),
+            'torcoins' => round(TorcoinCalculator::fromDistance($row['distance_km']) + $bonuses->get($row['participant']->id, 0), 2),
         ];
 
         $previous = $resolver->previousPeriod($period);
         $next = $resolver->nextPeriod($period);
-        $allTimeTorcoins = $allTimeRows->sum(fn (array $row) => TorcoinCalculator::fromDistance($row['distance_km']));
+        $allTimeTorcoins = $allTimeRows->sum(fn (array $row) => round(
+            TorcoinCalculator::fromDistance($row['distance_km']) + $allTimeBonuses->get($row['participant']->id, 0),
+            2
+        ));
 
         return Inertia::render('Home', [
             'weeklyChart' => $weeklyChart,
@@ -87,9 +95,9 @@ class HomeController extends Controller
             'weekTorcoins' => $weekTorcoins,
             'weekRidesCount' => $weekRidesCount,
             'activeParticipants' => $activeParticipants,
-            'leader' => $weekRows->isNotEmpty() ? $mapRanking($weekRows->first()) : null,
-            'weekRankings' => $weekRows->map($mapRanking),
-            'allTimeTop10' => $allTimeRows->take(10)->values()->map($mapRanking),
+            'leader' => $weekRows->isNotEmpty() ? $mapRanking($weekRows->first(), $weekBonuses) : null,
+            'weekRankings' => $weekRows->map(fn (array $row) => $mapRanking($row, $weekBonuses)),
+            'allTimeTop10' => $allTimeRows->take(10)->values()->map(fn (array $row) => $mapRanking($row, $allTimeBonuses)),
             'totalParticipants' => Participant::count(),
             'clubStats' => [
                 'total_distance' => (float) RideResult::sum('distance_km'),

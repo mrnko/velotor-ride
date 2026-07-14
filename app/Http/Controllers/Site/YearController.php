@@ -35,13 +35,14 @@ class YearController extends Controller
         $rows = $leaderboard->forYear((int) $year);
         $periodIds = WeeklyPeriod::where('year', $year)->pluck('id');
         $totalDistance = (float) RideResult::whereIn('weekly_period_id', $periodIds)->sum('distance_km');
+        $bonuses = TorcoinCalculator::bonusesByParticipant($periodIds);
 
         return Inertia::render('Year/Show', [
             'year' => (int) $year,
             'availableYears' => $availableYears,
             'totalDistance' => $totalDistance,
             'participantsCount' => $rows->count(),
-            'totalTorcoins' => TorcoinCalculator::fromDistance($totalDistance),
+            'totalTorcoins' => round(TorcoinCalculator::fromDistance($totalDistance) + $bonuses->sum(), 2),
             'rankings' => $rows->map(fn (array $row) => [
                 'rank' => $row['rank'],
                 'participant_id' => $row['participant']->id,
@@ -51,7 +52,7 @@ class YearController extends Controller
                 'name' => $row['participant']->display_name,
                 'distance_km' => $row['distance_km'],
                 'rides_count' => $row['rides_count'],
-                'torcoins' => TorcoinCalculator::fromDistance($row['distance_km']),
+                'torcoins' => round(TorcoinCalculator::fromDistance($row['distance_km']) + $bonuses->get($row['participant']->id, 0), 2),
             ]),
             'seo' => Seo::make(
                 title: "Річний рейтинг {$year}",

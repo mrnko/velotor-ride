@@ -2,13 +2,14 @@
 
 namespace App\Models;
 
+use Database\Factories\WeeklyPeriodFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class WeeklyPeriod extends Model
 {
-    /** @use HasFactory<\Database\Factories\WeeklyPeriodFactory> */
+    /** @use HasFactory<WeeklyPeriodFactory> */
     use HasFactory;
 
     protected $fillable = [
@@ -42,6 +43,11 @@ class WeeklyPeriod extends Model
     public function botReports(): HasMany
     {
         return $this->hasMany(BotReport::class);
+    }
+
+    public function torcoinBonuses(): HasMany
+    {
+        return $this->hasMany(TorcoinBonus::class);
     }
 
     public function isActive(): bool

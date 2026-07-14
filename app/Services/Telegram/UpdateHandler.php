@@ -6,10 +6,13 @@ use App\Models\BotMessageLog;
 use App\Models\Participant;
 use App\Models\RideResult;
 use App\Models\Setting;
+use App\Models\TorcoinBonus;
+use App\Models\WeeklyPeriod;
 use App\Services\Parsing\ResultParser;
 use App\Services\Stats\DuplicateGuard;
 use App\Services\Torcoins\TorcoinCalculator;
 use App\Services\Weeks\WeekResolverService;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Throwable;
@@ -162,14 +165,33 @@ class UpdateHandler
 
         $period = $this->resolver->activePeriod();
 
-        RideResult::create([
-            'participant_id' => $participant->id,
-            'weekly_period_id' => $period->id,
-            'distance_km' => $parsed->distanceKm,
-            'raw_message' => $text,
-            'telegram_message_id' => $message['message_id'] ?? null,
-            'source' => 'telegram',
-        ]);
+        $firstResultBonus = DB::transaction(function () use ($period, $participant, $parsed, $text, $message): ?TorcoinBonus {
+            $lockedPeriod = WeeklyPeriod::whereKey($period->id)->lockForUpdate()->firstOrFail();
+            $isFirstResult = ! RideResult::where('weekly_period_id', $lockedPeriod->id)->exists();
+            $bonusAlreadyAwarded = TorcoinBonus::where('weekly_period_id', $lockedPeriod->id)
+                ->where('reason', TorcoinBonus::REASON_FIRST_WEEKLY_RESULT)
+                ->exists();
+
+            RideResult::create([
+                'participant_id' => $participant->id,
+                'weekly_period_id' => $lockedPeriod->id,
+                'distance_km' => $parsed->distanceKm,
+                'raw_message' => $text,
+                'telegram_message_id' => $message['message_id'] ?? null,
+                'source' => 'telegram',
+            ]);
+
+            if (! $isFirstResult || $bonusAlreadyAwarded) {
+                return null;
+            }
+
+            return TorcoinBonus::create([
+                'participant_id' => $participant->id,
+                'weekly_period_id' => $lockedPeriod->id,
+                'amount' => config('velotor.weekly_first_result_bonus', 0.1),
+                'reason' => TorcoinBonus::REASON_FIRST_WEEKLY_RESULT,
+            ]);
+        });
 
         $this->syncAvatar($participant);
 
@@ -178,7 +200,7 @@ class UpdateHandler
             ->sum('distance_km');
 
         $allTimeTotal = (float) RideResult::where('participant_id', $participant->id)->sum('distance_km');
-        $torcoins = TorcoinCalculator::fromDistance($allTimeTotal);
+        $torcoins = TorcoinCalculator::balanceForParticipant($participant, $allTimeTotal);
         $kmToNext = TorcoinCalculator::kmToNextCoin($allTimeTotal);
         $statUrl = route('stat.home');
 
@@ -197,6 +219,23 @@ class UpdateHandler
         ]);
 
         $this->telegram->sendMessage($chatId, $reply);
+
+        if ($firstResultBonus) {
+            $bonus = rtrim(rtrim(number_format((float) $firstResultBonus->amount, 2, '.', ''), '0'), '.');
+            $name = e($participant->display_name);
+            $balance = number_format($torcoins, 2, '.', ' ');
+
+            $this->telegram->sendMessage($chatId, implode("\n", [
+                "🏆 <b>{$name}</b>, вітаємо Вас! Ви стали першим учасником, який завантажив свої результати цього тижня і отримуєте за це бонус!",
+                '',
+                "✅ <b>{$bonus} TOR.COINS</b>",
+                '',
+                "💰 Ваш баланс TOR.COINS: <b>{$balance}</b>",
+                '',
+                'Гарного дня!',
+            ]));
+        }
+
         $log->update(['status' => 'ok', 'handler' => 'result_saved']);
     }
 
