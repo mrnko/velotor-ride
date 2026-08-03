@@ -17,6 +17,7 @@ class DashboardController extends Controller
     public function index(WeekResolverService $resolver): Response
     {
         $period = $resolver->activePeriod();
+        $previous = $resolver->previousPeriod($period);
 
         return Inertia::render('Admin/Dashboard', [
             'activePeriod' => [
@@ -32,6 +33,12 @@ class DashboardController extends Controller
             'recentErrorsCount' => BotMessageLog::where('status', 'error')
                 ->where('created_at', '>=', now()->subDay())
                 ->count(),
+            'rollbackPeriod' => $previous && $previous->status === 'closed' ? [
+                'active_period_id' => $period->id,
+                'previous_period_id' => $previous->id,
+                'week_number' => $previous->week_number,
+                'year' => $previous->year,
+            ] : null,
         ]);
     }
 

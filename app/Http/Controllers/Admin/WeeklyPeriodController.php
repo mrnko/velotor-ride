@@ -4,10 +4,12 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\WeeklyPeriod;
-use App\Services\Weeks\WeekReminderAction;
 use App\Services\Weeks\WeeklyCloseAction;
+use App\Services\Weeks\WeeklyRollbackAction;
+use App\Services\Weeks\WeekReminderAction;
 use App\Support\DurationFormatter;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -58,5 +60,32 @@ class WeeklyPeriodController extends Controller
                 ? "Нагадування надіслано в чат для тижня {$result['period']->week_number}/{$result['period']->year}."
                 : "Не вдалося надіслати нагадування: {$result['error']}"
         );
+    }
+
+    public function rollback(Request $request, WeeklyRollbackAction $action): RedirectResponse
+    {
+        $validated = $request->validate([
+            'active_period_id' => ['required', 'integer'],
+            'previous_period_id' => ['required', 'integer'],
+        ]);
+
+        $result = $action->execute(
+            $validated['active_period_id'],
+            $validated['previous_period_id'],
+        );
+
+        if ($result['period']) {
+            $period = $result['period'];
+
+            return back()->with('success', "Тиждень {$period->week_number}/{$period->year} знову відкрито.");
+        }
+
+        $message = match ($result['reason']) {
+            'active_period_has_data' => 'Відкат неможливий: у новому поточному тижні вже є результати.',
+            'stale_periods' => 'Стан тижнів уже змінився. Оновіть сторінку та спробуйте ще раз.',
+            default => 'Не вдалося відкотити останню фіксацію.',
+        };
+
+        return back()->with('error', $message);
     }
 }

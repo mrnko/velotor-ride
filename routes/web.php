@@ -1,13 +1,13 @@
 <?php
 
 use App\Http\Controllers\Admin\BotLogController;
-use App\Http\Controllers\AnnounceUpdateController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\ParticipantController as AdminParticipantController;
 use App\Http\Controllers\Admin\PasswordController;
 use App\Http\Controllers\Admin\RideResultController;
 use App\Http\Controllers\Admin\SettingController;
 use App\Http\Controllers\Admin\WeeklyPeriodController;
+use App\Http\Controllers\AnnounceUpdateController;
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Site\AllTimeController;
 use App\Http\Controllers\Site\HomeController;
@@ -66,12 +66,15 @@ Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
     Route::post('/participants/{participant}/merge', [AdminParticipantController::class, 'merge'])->name('participants.merge');
 
     Route::get('/ride-results', [RideResultController::class, 'index'])->name('ride-results.index');
+    Route::get('/ride-results/create', [RideResultController::class, 'create'])->name('ride-results.create');
+    Route::post('/ride-results', [RideResultController::class, 'store'])->name('ride-results.store');
     Route::get('/ride-results/{rideResult}/edit', [RideResultController::class, 'edit'])->name('ride-results.edit');
     Route::put('/ride-results/{rideResult}', [RideResultController::class, 'update'])->name('ride-results.update');
     Route::delete('/ride-results/{rideResult}', [RideResultController::class, 'destroy'])->name('ride-results.destroy');
 
     Route::get('/weekly-periods', [WeeklyPeriodController::class, 'index'])->name('weekly-periods.index');
     Route::post('/weekly-periods/close', [WeeklyPeriodController::class, 'close'])->name('weekly-periods.close');
+    Route::post('/weekly-periods/rollback', [WeeklyPeriodController::class, 'rollback'])->name('weekly-periods.rollback');
     Route::post('/weekly-periods/remind', [WeeklyPeriodController::class, 'remind'])->name('weekly-periods.remind');
 
     Route::get('/bot-logs', [BotLogController::class, 'index'])->name('bot-logs.index');

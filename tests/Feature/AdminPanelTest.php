@@ -8,7 +8,9 @@ use App\Models\Setting;
 use App\Models\User;
 use App\Models\WeeklyPeriod;
 use App\Services\Weeks\WeekResolverService;
+use App\Support\Transliterate;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
@@ -76,7 +78,7 @@ class AdminPanelTest extends TestCase
         $participant->refresh();
         $this->assertSame('Петро Іваненко', $participant->display_name);
         $this->assertSame('petro_new', $participant->telegram_username); // leading @ stripped
-        $this->assertSame(\App\Support\Transliterate::slug('Петро Іваненко'), $participant->slug);
+        $this->assertSame(Transliterate::slug('Петро Іваненко'), $participant->slug);
         $this->assertNotSame('ivan-petrov', $participant->slug);
     }
 
@@ -91,7 +93,7 @@ class AdminPanelTest extends TestCase
 
     public function test_renaming_to_an_existing_name_gets_a_unique_slug(): void
     {
-        $base = \App\Support\Transliterate::slug('Олег Сидоренко');
+        $base = Transliterate::slug('Олег Сидоренко');
         Participant::factory()->create(['display_name' => 'Олег Сидоренко', 'slug' => $base]);
         $other = Participant::factory()->create(['display_name' => 'Хтось Інший']);
 
@@ -186,6 +188,45 @@ class AdminPanelTest extends TestCase
         $this->assertEquals(55.0, (float) $period->fresh()->total_distance);
     }
 
+    public function test_admin_can_add_a_participant_result_for_current_or_previous_week(): void
+    {
+        $previous = WeeklyPeriod::factory()->create([
+            'year' => 2026,
+            'week_number' => 31,
+            'start_date' => '2026-07-27',
+            'end_date' => '2026-08-03',
+        ]);
+        WeeklyPeriod::factory()->active()->create([
+            'year' => 2026,
+            'week_number' => 32,
+            'start_date' => '2026-08-03',
+            'end_date' => '2026-08-10',
+        ]);
+        $participant = Participant::factory()->create(['display_name' => 'Test Rider']);
+
+        $this->actingAs($this->admin())->get('/admin/ride-results/create')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Admin/RideResults/Create')
+                ->has('participants', 1)
+                ->has('periods', 2)
+            );
+
+        $this->actingAs($this->admin())->post('/admin/ride-results', [
+            'participant_id' => $participant->id,
+            'weekly_period_id' => $previous->id,
+            'distance_km' => 37.5,
+        ])->assertRedirect('/admin/ride-results')->assertSessionHas('success');
+
+        $this->assertDatabaseHas('ride_results', [
+            'participant_id' => $participant->id,
+            'weekly_period_id' => $previous->id,
+            'distance_km' => 37.5,
+            'source' => 'admin',
+        ]);
+        $this->assertEquals(37.5, (float) $previous->fresh()->total_distance);
+    }
+
     public function test_admin_can_delete_a_ride_result(): void
     {
         $period = app(WeekResolverService::class)->activePeriod();
@@ -213,6 +254,37 @@ class AdminPanelTest extends TestCase
 
         $this->assertSame('closed', $active->fresh()->status);
         $this->assertSame(2, WeeklyPeriod::count());
+    }
+
+    public function test_admin_can_rollback_the_last_closed_week_from_dashboard(): void
+    {
+        $previous = WeeklyPeriod::factory()->create([
+            'year' => 2026,
+            'week_number' => 31,
+            'start_date' => '2026-07-27',
+            'end_date' => '2026-08-03',
+        ]);
+        $active = WeeklyPeriod::factory()->active()->create([
+            'year' => 2026,
+            'week_number' => 32,
+            'start_date' => '2026-08-03',
+            'end_date' => '2026-08-10',
+        ]);
+
+        $this->actingAs($this->admin())->get('/admin')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('rollbackPeriod.previous_period_id', $previous->id)
+                ->where('rollbackPeriod.active_period_id', $active->id)
+            );
+
+        $this->actingAs($this->admin())->post('/admin/weekly-periods/rollback', [
+            'active_period_id' => $active->id,
+            'previous_period_id' => $previous->id,
+        ])->assertRedirect()->assertSessionHas('success');
+
+        $this->assertDatabaseMissing('weekly_periods', ['id' => $active->id]);
+        $this->assertSame('active', $previous->fresh()->status);
     }
 
     public function test_admin_can_manually_send_a_week_closing_reminder(): void
@@ -254,7 +326,7 @@ class AdminPanelTest extends TestCase
             'duplicate_distance_delta_km' => 1,
         ])->assertRedirect();
 
-        $this->assertSame('500', \App\Models\Setting::where('key', 'max_distance_km')->value('value'));
+        $this->assertSame('500', Setting::where('key', 'max_distance_km')->value('value'));
     }
 
     public function test_admin_can_view_bot_logs(): void
@@ -274,7 +346,7 @@ class AdminPanelTest extends TestCase
             'password_confirmation' => 'new-secret-password',
         ])->assertRedirect();
 
-        $this->assertTrue(\Illuminate\Support\Facades\Hash::check('new-secret-password', $admin->fresh()->password));
+        $this->assertTrue(Hash::check('new-secret-password', $admin->fresh()->password));
     }
 
     public function test_admin_cannot_change_password_with_wrong_current_password(): void
@@ -287,6 +359,6 @@ class AdminPanelTest extends TestCase
             'password_confirmation' => 'new-secret-password',
         ])->assertSessionHasErrors('current_password');
 
-        $this->assertTrue(\Illuminate\Support\Facades\Hash::check('password', $admin->fresh()->password));
+        $this->assertTrue(Hash::check('password', $admin->fresh()->password));
     }
 }

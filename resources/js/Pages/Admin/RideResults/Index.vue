@@ -17,7 +17,12 @@ function destroy(id) {
 
 <template>
     <div class="space-y-4">
-        <h1 class="text-2xl font-extrabold text-white">Результати заїздів</h1>
+        <div class="flex flex-wrap items-center justify-between gap-3">
+            <h1 class="text-2xl font-extrabold text-white">Результати заїздів</h1>
+            <Link href="/admin/ride-results/create" class="rounded-lg bg-amber-500 px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-amber-400">
+                Додати результат
+            </Link>
+        </div>
 
         <div class="overflow-x-auto rounded-2xl border border-slate-800">
             <table class="w-full min-w-[720px] text-sm">
