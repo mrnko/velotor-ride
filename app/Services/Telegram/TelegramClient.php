@@ -20,14 +20,14 @@ class TelegramClient
     /**
      * @return array{ok: bool, message_id: int|null, error: string|null}
      */
-    public function sendMessage(string $chatId, string $text): array
+    public function sendMessage(string $chatId, string $text, array $options = []): array
     {
         try {
-            $response = Http::asJson()->post("{$this->baseUrl}/sendMessage", [
+            $response = Http::asJson()->post("{$this->baseUrl}/sendMessage", array_merge($options, [
                 'chat_id' => $chatId,
                 'text' => $text,
                 'parse_mode' => 'HTML',
-            ]);
+            ]));
 
             if ($response->successful() && $response->json('ok')) {
                 return [
@@ -44,6 +44,45 @@ class TelegramClient
             Log::error('Telegram sendMessage exception', ['message' => $e->getMessage()]);
 
             return ['ok' => false, 'message_id' => null, 'error' => $e->getMessage()];
+        }
+    }
+
+    public function answerCallbackQuery(string $callbackQueryId, ?string $text = null): void
+    {
+        $payload = ['callback_query_id' => $callbackQueryId];
+
+        if ($text !== null) {
+            $payload['text'] = $text;
+        }
+
+        try {
+            Http::asJson()->post("{$this->baseUrl}/answerCallbackQuery", $payload);
+        } catch (\Throwable $e) {
+            Log::warning('Telegram answerCallbackQuery exception', ['message' => $e->getMessage()]);
+        }
+    }
+
+    public function isChatAdmin(string $chatId, int|string $userId): bool
+    {
+        $configuredAdminIds = array_map('strval', config('services.telegram.admin_ids', []));
+
+        if (in_array((string) $userId, $configuredAdminIds, true)) {
+            return true;
+        }
+
+        try {
+            $response = Http::get("{$this->baseUrl}/getChatMember", [
+                'chat_id' => $chatId,
+                'user_id' => $userId,
+            ]);
+
+            return $response->successful()
+                && $response->json('ok')
+                && in_array($response->json('result.status'), ['creator', 'administrator'], true);
+        } catch (\Throwable $e) {
+            Log::warning('Telegram getChatMember exception', ['message' => $e->getMessage()]);
+
+            return false;
         }
     }
 

@@ -25,6 +25,7 @@ class UpdateHandler
         private readonly ResultParser $parser,
         private readonly DuplicateGuard $duplicateGuard,
         private readonly WeekResolverService $resolver,
+        private readonly AdminBotService $adminBot,
     ) {}
 
     /**
@@ -50,6 +51,12 @@ class UpdateHandler
 
     private function process(array $update): void
     {
+        if (is_array($update['callback_query'] ?? null)) {
+            $this->processCallback($update, $update['callback_query']);
+
+            return;
+        }
+
         $message = $update['message'] ?? null;
 
         if (! is_array($message) || ! isset($message['text'], $message['from'], $message['chat'])) {
@@ -80,12 +87,57 @@ class UpdateHandler
         $commandName = BotCommandRouter::commandNameFromText($text);
 
         if ($commandName !== null) {
+            if ($commandName === 'admin') {
+                $this->adminBot->showMenu($chatId, $participant->telegram_user_id);
+                $log->update(['handler' => 'admin_menu']);
+
+                return;
+            }
+
             $this->handleCommand($commandName, $participant, $chatId, $log);
 
             return;
         }
 
+        if ($this->adminBot->handlePendingResult($text, $chatId, $participant->telegram_user_id)) {
+            $log->update(['handler' => 'admin_manual_result']);
+
+            return;
+        }
+
         $this->handleResultMessage($message, $participant, $chatId, $log);
+    }
+
+    private function processCallback(array $update, array $callback): void
+    {
+        $from = $callback['from'] ?? null;
+        $chatId = $callback['message']['chat']['id'] ?? null;
+
+        if (! is_array($from) || $chatId === null) {
+            BotMessageLog::create([
+                'telegram_update_id' => $update['update_id'] ?? null,
+                'message_text' => $callback['data'] ?? null,
+                'status' => 'ignored',
+                'raw_payload' => $update,
+            ]);
+
+            return;
+        }
+
+        $participant = $this->resolveParticipant($from);
+        $log = BotMessageLog::create([
+            'telegram_update_id' => $update['update_id'] ?? null,
+            'chat_id' => (string) $chatId,
+            'telegram_user_id' => $participant->telegram_user_id,
+            'message_text' => $callback['data'] ?? null,
+            'direction' => 'incoming',
+            'handler' => 'admin_callback',
+            'status' => 'ok',
+            'raw_payload' => $update,
+        ]);
+
+        $this->adminBot->handleCallback($callback);
+        $log->update(['status' => 'ok']);
     }
 
     private function resolveParticipant(array $from): Participant

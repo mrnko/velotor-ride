@@ -6,6 +6,7 @@ use App\Models\BotMessageLog;
 use App\Models\Participant;
 use App\Models\RideResult;
 use App\Models\TorcoinBonus;
+use App\Models\WeeklyPeriod;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Factory;
 use Illuminate\Support\Facades\Http;
@@ -43,6 +44,27 @@ class TelegramWebhookTest extends TestCase
                 'text' => $text,
             ], $overrides),
         ], []);
+    }
+
+    private function callbackUpdate(string $data): array
+    {
+        return [
+            'update_id' => random_int(1, 999999),
+            'callback_query' => [
+                'id' => (string) random_int(1, 999999),
+                'from' => [
+                    'id' => 555111,
+                    'is_bot' => false,
+                    'first_name' => 'Admin',
+                    'username' => 'admin',
+                ],
+                'message' => [
+                    'message_id' => 123,
+                    'chat' => ['id' => -100123456, 'type' => 'supergroup'],
+                ],
+                'data' => $data,
+            ],
+        ];
     }
 
     public function test_ignores_unrelated_chat_message(): void
@@ -269,6 +291,114 @@ class TelegramWebhookTest extends TestCase
         $this->postJson(route('telegram.webhook'), $this->update('/alltime'))->assertOk();
 
         Http::assertSent(fn ($request) => str_contains(($request['text'] ?? ''), 'весь час'));
+    }
+
+    public function test_telegram_chat_administrator_can_open_admin_menu(): void
+    {
+        Http::swap(new Factory);
+        Http::fake([
+            '*getChatMember*' => Http::response(['ok' => true, 'result' => ['status' => 'administrator']], 200),
+            'api.telegram.org/*' => Http::response(['ok' => true, 'result' => ['message_id' => 1]], 200),
+        ]);
+
+        $this->postJson(route('telegram.webhook'), $this->update('/admin'))->assertOk();
+
+        Http::assertSent(fn ($request) => str_contains($request->url(), 'sendMessage')
+            && isset($request['reply_markup']['inline_keyboard']));
+    }
+
+    public function test_admin_can_add_a_result_for_a_registered_participant_through_bot_buttons(): void
+    {
+        config(['services.telegram.admin_ids' => ['555111']]);
+
+        $period = WeeklyPeriod::factory()->active()->create([
+            'year' => 2026,
+            'week_number' => 31,
+            'start_date' => '2026-07-27',
+            'end_date' => '2026-08-03',
+        ]);
+        $target = Participant::factory()->create(['display_name' => 'Target Rider']);
+
+        $this->postJson(route('telegram.webhook'), $this->update('/admin'))->assertOk();
+        $this->postJson(route('telegram.webhook'), $this->callbackUpdate('admin:add'))->assertOk();
+        $this->postJson(route('telegram.webhook'), $this->callbackUpdate("admin:period:{$period->id}"))->assertOk();
+        $this->postJson(route('telegram.webhook'), $this->callbackUpdate("admin:participant:{$period->id}:{$target->id}"))->assertOk();
+        $this->postJson(route('telegram.webhook'), $this->update('42,5'))->assertOk();
+
+        $this->assertDatabaseHas('ride_results', [
+            'participant_id' => $target->id,
+            'weekly_period_id' => $period->id,
+            'distance_km' => 42.5,
+            'source' => 'admin',
+        ]);
+        $this->assertEquals(42.5, (float) $period->fresh()->total_distance);
+        $this->assertSame('admin_manual_result', BotMessageLog::latest('id')->first()->handler);
+
+        Http::assertSent(fn ($request) => str_contains($request->url(), 'sendMessage')
+            && str_contains((string) ($request['text'] ?? ''), 'Target Rider')
+            && str_contains((string) ($request['text'] ?? ''), '42.50'));
+    }
+
+    public function test_admin_can_rollback_an_empty_new_week_through_bot_confirmation(): void
+    {
+        config(['services.telegram.admin_ids' => ['555111']]);
+
+        $previous = WeeklyPeriod::factory()->create([
+            'year' => 2026,
+            'week_number' => 30,
+            'start_date' => '2026-07-20',
+            'end_date' => '2026-07-27',
+        ]);
+        $active = WeeklyPeriod::factory()->active()->create([
+            'year' => 2026,
+            'week_number' => 31,
+            'start_date' => '2026-07-27',
+            'end_date' => '2026-08-03',
+        ]);
+
+        $this->postJson(route('telegram.webhook'), $this->callbackUpdate('admin:rollback'))->assertOk();
+        $this->assertSame('closed', $previous->fresh()->status);
+
+        $this->postJson(route('telegram.webhook'), $this->callbackUpdate("admin:rollback_confirm:{$active->id}:{$previous->id}"))->assertOk();
+
+        $this->assertDatabaseMissing('weekly_periods', ['id' => $active->id]);
+        $this->assertSame('active', $previous->fresh()->status);
+        $this->assertNull($previous->fresh()->report_sent_at);
+        $this->assertNull($previous->fresh()->closed_at);
+
+        $this->postJson(route('telegram.webhook'), $this->callbackUpdate('admin:close'))->assertOk();
+        $this->postJson(route('telegram.webhook'), $this->callbackUpdate("admin:close_confirm:{$previous->id}"))->assertOk();
+
+        $this->assertSame('closed', $previous->fresh()->status);
+        $this->assertDatabaseHas('weekly_periods', ['year' => 2026, 'week_number' => 31, 'status' => 'active']);
+
+        $this->postJson(route('telegram.webhook'), $this->callbackUpdate("admin:close_confirm:{$previous->id}"))->assertOk();
+        $this->assertDatabaseHas('weekly_periods', ['year' => 2026, 'week_number' => 31, 'status' => 'active']);
+    }
+
+    public function test_week_rollback_refuses_to_delete_a_new_week_that_has_results(): void
+    {
+        config(['services.telegram.admin_ids' => ['555111']]);
+
+        $previous = WeeklyPeriod::factory()->create([
+            'year' => 2026,
+            'week_number' => 30,
+            'start_date' => '2026-07-20',
+            'end_date' => '2026-07-27',
+        ]);
+        $active = WeeklyPeriod::factory()->active()->create([
+            'year' => 2026,
+            'week_number' => 31,
+            'start_date' => '2026-07-27',
+            'end_date' => '2026-08-03',
+        ]);
+        RideResult::factory()->create(['weekly_period_id' => $active->id]);
+
+        $this->postJson(route('telegram.webhook'), $this->callbackUpdate("admin:rollback_confirm:{$active->id}:{$previous->id}"))->assertOk();
+
+        $this->assertDatabaseHas('weekly_periods', ['id' => $active->id, 'status' => 'active']);
+        $this->assertSame('closed', $previous->fresh()->status);
+        Http::assertSent(fn ($request) => str_contains((string) ($request['text'] ?? ''), 'у новому тижні вже є дані'));
     }
 
     public function test_webhook_rejects_request_with_wrong_secret(): void

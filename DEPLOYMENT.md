@@ -88,7 +88,9 @@ server {
 ## 5. Telegram webhook
 
 1. У `.env` виставити `TELEGRAM_BOT_TOKEN` (від @BotFather) і
-   `TELEGRAM_WEBHOOK_SECRET` (будь-який довгий випадковий рядок).
+   `TELEGRAM_WEBHOOK_SECRET` (будь-який довгий випадковий рядок). За потреби
+   додати `TELEGRAM_ADMIN_IDS` — Telegram user ID адміністраторів через кому;
+   у груповому чаті бот також автоматично перевіряє роль адміністратора.
 2. Зареєструвати вебхук у Telegram (один раз, з будь-якої машини):
 
 ```bash
