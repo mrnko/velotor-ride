@@ -34,7 +34,7 @@ return [
         'shop_url' => env('VELOTOR_SHOP_URL', 'https://velotor.com.ua'),
         'site_url' => env('VELOTOR_SITE_URL', 'https://ride.velotor.com.ua'),
         'developer_name' => 'Oleksii Myronenko',
-        'developer_url' => 'https://mrnko.com',
+        'developer_url' => 'https://mrnko.com/?utm_source=ride.velotor.com.ua&utm_medium=referral&utm_campaign=footer_credit',
     ],
 
     /*

@@ -67,9 +67,9 @@ const statLinks = [
         </div>
 
         <div class="border-t border-brand-100">
-            <div class="mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 px-4 py-5 sm:flex-row sm:px-6 lg:px-8">
-                <p class="text-center text-xs text-slate-500 sm:text-left">
-                    © {{ year }} {{ brand.full_name }}. Усі права захищені.
+            <div class="mx-auto flex max-w-7xl flex-col items-center gap-2.5 px-4 pb-7 pt-5 text-center sm:px-6 lg:px-8">
+                <p class="text-xs text-slate-500">
+                    © 2020–{{ year }} {{ brand.full_name }}. Усі права захищені.
                     <span class="ml-1">Версія {{ currentRelease.version }} ·</span>
                     <button
                         type="button"
@@ -80,9 +80,15 @@ const statLinks = [
                     </button>
                 </p>
 
-                <p class="text-xs text-slate-500">
-                    Розробник
-                    <a :href="brand.developer_url" target="_blank" rel="noopener" class="font-semibold text-brand-600 transition hover:text-brand-700">
+                <p class="mrnko-credit inline-flex flex-wrap items-center justify-center gap-x-1.5 text-xs text-slate-600">
+                    <span>Розробка сайту —</span>
+                    <a
+                        :href="brand.developer_url"
+                        target="_blank"
+                        rel="noopener"
+                        aria-label="Розробка сайту — Oleksii Myronenko"
+                        class="font-bold text-brand-700 underline decoration-brand-200 underline-offset-4 transition hover:text-brand-900 hover:decoration-brand-500"
+                    >
                         {{ brand.developer_name }}
                     </a>
                 </p>
